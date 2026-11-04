@@ -226,3 +226,4 @@ Per PRD requirements, all simulated entities (inventory, flights, PNRs, tickets,
 - All issued ticket numbers follow the format `001-DEMO-XXXXXXXXXX`.
 - The frontend includes a persistent amber demonstration warning banner across all views.
 - When transitioning to live inventory, toggle `NODE_ENV=production` and remove demo prefixes from ticket numbering generator in `apps/api/src/modules/payment/service.ts`.
+

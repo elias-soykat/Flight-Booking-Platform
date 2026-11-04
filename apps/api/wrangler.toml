@@ -13,3 +13,4 @@ SUPABASE_SERVICE_ROLE_KEY = "placeholder-supabase-service-role-key"
 # In production edge deployment, the Supabase Postgres connection string
 # is bound securely via Cloudflare secrets:
 # npx wrangler secret put DATABASE_URL
+
