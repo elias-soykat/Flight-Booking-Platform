@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DemoBanner } from './components/DemoBanner';
 import { Navbar } from './components/Navbar';
 import { DEMO_USERS, type DemoUserSession } from './components/UserSwitcher';
 import { AgencyPortal, type AgencyInfo, type AgencyInvitation, type AssociatedCustomer } from './components/AgencyPortal';
 import { CustomerInvitations, type CustomerAgencyInvitation, type ActiveAgencyMembership } from './components/CustomerInvitations';
-import { Plane, Building2, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
+import { FlightSearchForm } from './components/FlightSearchForm';
+import { FlightResults } from './components/FlightResults';
+import type { FlightOffer, FlightSearchQuery } from '@travel-platform/shared';
+import { apiClient } from './lib/api-client';
+import { Plane, Building2, ShieldCheck, CheckCircle2, ArrowRight, Check } from 'lucide-react';
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState('flights');
   const [currentUser, setCurrentUser] = useState<DemoUserSession>(DEMO_USERS.CUSTOMER);
+
+  // Flight search state
+  const [searchCriteria, setSearchCriteria] = useState<FlightSearchQuery | null>({
+    origin: 'JFK',
+    destination: 'LHR',
+    departureDate: '2026-12-01',
+    passengerCount: 1,
+    cabinClass: 'ECONOMY'
+  });
+  const [flightOffers, setFlightOffers] = useState<FlightOffer[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<FlightOffer | null>(null);
 
   // Agency demo state
   const [agency, setAgency] = useState<AgencyInfo | null>({
@@ -41,6 +57,42 @@ export const App = () => {
   ]);
   const [activeMembership, setActiveMembership] = useState<ActiveAgencyMembership | null>(null);
 
+  // Initial flight search on load
+  useEffect(() => {
+    if (searchCriteria) {
+      handleFlightSearch(searchCriteria);
+    }
+  }, []);
+
+  const handleFlightSearch = async (criteria: FlightSearchQuery) => {
+    setSearchCriteria(criteria);
+    setIsSearching(true);
+    setSelectedOffer(null);
+
+    try {
+      const queryParams = new URLSearchParams({
+        origin: criteria.origin,
+        destination: criteria.destination,
+        departureDate: criteria.departureDate,
+        passengerCount: criteria.passengerCount.toString(),
+        cabinClass: criteria.cabinClass
+      });
+      if (criteria.returnDate) {
+        queryParams.set('returnDate', criteria.returnDate);
+      }
+
+      const response = await apiClient.get<{ success: boolean; data: FlightOffer[] }>(
+        `/flights/search?${queryParams.toString()}`
+      );
+      setFlightOffers(response.data || []);
+    } catch {
+      // Fallback for standalone/mock demo if API server is not active during unit tests
+      setFlightOffers([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleCreateAgency = (name: string) => {
     setAgency({
       id: `agency-${Date.now()}`,
@@ -59,7 +111,6 @@ export const App = () => {
     };
     setAgencyInvitations(prev => [newInv, ...prev]);
 
-    // If invited customer is current customer, add to their inbox
     if (email === currentUser.email) {
       setCustomerInvitations(prev => [
         {
@@ -92,7 +143,6 @@ export const App = () => {
 
     setCustomerInvitations(prev => prev.filter(i => i.id !== invitationId));
 
-    // Update agency side
     setAgencyInvitations(prev =>
       prev.map(i => (i.id === invitationId ? { ...i, status: 'ACCEPTED' } : i))
     );
@@ -126,73 +176,45 @@ export const App = () => {
         onUserChange={setCurrentUser}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Render Tab Views */}
         {activeTab === 'flights' && (
           <div className="space-y-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-              <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold uppercase tracking-wider mb-4 border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Milestone 2 Active &bull; Role: {currentUser.role}
+            {/* Search Form */}
+            <FlightSearchForm onSearch={handleFlightSearch} />
+
+            {/* Selected Offer Toast / Confirmation */}
+            {selectedOffer && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-emerald-950 text-sm">
+                      Flight Selected: {selectedOffer.originAirport.iataCode} &rarr; {selectedOffer.destinationAirport.iataCode} (${selectedOffer.totalAmount.toFixed(2)})
+                    </h4>
+                    <p className="text-xs text-emerald-700">
+                      Offer reference: {selectedOffer.supplierOfferReference} &bull; Ready for Milestone 4 (Booking Engine & Passenger Information)
+                    </p>
+                  </div>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                  Flight-First Travel Booking Platform
-                </h1>
-                <p className="mt-3 text-base sm:text-lg text-slate-600 leading-relaxed">
-                  Demonstrating identity verification, agency invitations with secure tokens, and the strictly one-agency relationship constraint.
-                </p>
+                <button
+                  onClick={() => setSelectedOffer(null)}
+                  className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 px-3 py-1.5 rounded-lg border border-emerald-300 bg-white"
+                >
+                  Change Selection
+                </button>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t border-slate-100">
-                <div
-                  onClick={() => setActiveTab('flights')}
-                  className="p-4 rounded-xl border border-slate-900 bg-slate-50/50 shadow-sm cursor-pointer"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold mb-3">
-                    <Plane className="w-5 h-5 text-emerald-700" />
-                  </div>
-                  <h2 className="font-semibold text-slate-900 text-base">Direct Flight Booking</h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Search flights, configure fares, enter passenger data, and reserve flights.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('agency')}
-                  className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all cursor-pointer"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold mb-3">
-                    <Building2 className="w-5 h-5 text-blue-700" />
-                  </div>
-                  <h2 className="font-semibold text-slate-900 text-base">Agency Portal</h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Invite customers via secure tokens and manage agency-created bookings.
-                  </p>
-                  <div className="mt-3 flex items-center text-xs font-semibold text-slate-900 gap-1">
-                    <span>Manage agency</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => setActiveTab('admin')}
-                  className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all cursor-pointer"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold mb-3">
-                    <ShieldCheck className="w-5 h-5 text-purple-700" />
-                  </div>
-                  <h2 className="font-semibold text-slate-900 text-base">Admin Dashboard</h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Inspect platform users, agencies, and operational queues.
-                  </p>
-                  <div className="mt-3 flex items-center text-xs font-semibold text-slate-900 gap-1">
-                    <span>Admin view</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Results List */}
+            <FlightResults
+              offers={flightOffers}
+              searchCriteria={searchCriteria}
+              onSelectOffer={setSelectedOffer}
+              isLoading={isSearching}
+            />
 
             {/* Customer Invitations card if currently logged in as Customer */}
             {currentUser.role === 'CUSTOMER' && (
@@ -238,33 +260,33 @@ export const App = () => {
           </div>
         )}
 
-        {/* Milestone 2 Features Checklist */}
+        {/* Milestone Features Checklist */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 2: Security & Tenancy Verification</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 3: Flight Search & Deterministic Inventory</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Auth middleware & server-side RBAC guards active</span>
+              <span>FlightSupplierAdapter interface decoupled from specific suppliers</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Customer profiles with validated update endpoints</span>
+              <span>Deterministic MockFlightSupplier with multi-airline routes</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Agency organization creation & invitation generation</span>
+              <span>Direct and connecting flights with layovers and durations</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Cryptographic SHA-256 token hashing for invitations</span>
+              <span>Pricing engine calculating 10% markup and total customer price</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Strictly 1-active-agency rule enforced (409 Conflict protection)</span>
+              <span>Visible [DEMO / MOCK] indicator on all flight cards</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Admin inspection endpoints guarded with ADMIN role check</span>
+              <span>Responsive search form with airport autocomplete & validation</span>
             </div>
           </div>
         </div>
