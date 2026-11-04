@@ -2,12 +2,16 @@
   "name": "travel-platform",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Flight-first Travel Booking Platform MVP",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:api": "npm run dev --workspace=@travel-platform/api",
+    "dev:web": "npm run dev --workspace=@travel-platform/web",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
