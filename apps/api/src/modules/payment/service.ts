@@ -251,6 +251,10 @@ export const paymentService = {
     return Array.from(ticketsStore.values()).filter(t => t.bookingId === bookingId);
   },
 
+  async listAllPayments(): Promise<PaymentAttemptEntity[]> {
+    return Array.from(paymentsStore.values());
+  },
+
   async getUnreconciledPayments(): Promise<PaymentAttemptEntity[]> {
     return Array.from(paymentsStore.values()).filter(p => p.status === 'UNKNOWN');
   },
