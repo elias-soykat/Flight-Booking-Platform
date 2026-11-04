@@ -2,7 +2,7 @@ import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { bookings, bookingPassengers } from './bookings';
 import { users } from './users';
 
-export const ticketIssuanceMethodEnum = pgEnum('ticket_issuance_method', ['AUTOMATIC_SIMULATED', 'ADMIN_MANUAL']);
+export const ticketIssuanceMethodEnum = pgEnum('ticket_issuance_method', ['AUTOMATIC_SIMULATED', 'ADMIN_MANUAL', 'SUPPLIER_ISSUED']);
 export const ticketIssuanceStatusEnum = pgEnum('ticket_issuance_status', ['ISSUED', 'VOIDED']);
 
 export const tickets = pgTable('tickets', {

@@ -22,6 +22,8 @@ export const bookings = pgTable('bookings', {
   supplierId: uuid('supplier_id').notNull(),
   inventorySource: text('inventory_source').notNull().default('MOCK'),
   supplierBookingReference: text('supplier_booking_reference'),
+  supplierOrderId: text('supplier_order_id'),
+  flightOfferSnapshot: jsonb('flight_offer_snapshot'),
   pnr: text('pnr'),
   bookingStatus: bookingStatusEnum('booking_status').notNull().default('PENDING'),
   currency: text('currency').notNull().default('USD'),

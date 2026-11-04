@@ -24,7 +24,9 @@ export type PaymentStatus =
   | 'UNKNOWN'
   | 'RECONCILED';
 
-export type TicketIssuanceMethod = 'AUTOMATIC_SIMULATED' | 'ADMIN_MANUAL';
+export type TicketIssuanceMethod = 'AUTOMATIC_SIMULATED' | 'ADMIN_MANUAL' | 'SUPPLIER_ISSUED';
+export type InventorySource = 'MOCK' | 'DUFFEL' | 'AMADEUS';
+export type PaymentProviderType = 'SIMULATED' | 'SSLCOMMERZ' | 'STRIPE';
 
 export type CancellationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -72,7 +74,7 @@ export interface FlightOffer {
   markupAmount: number;
   totalAmount: number;
   currency: string;
-  inventorySource: 'MOCK';
+  inventorySource: InventorySource;
   expiresAt: string;
 }
 
@@ -150,7 +152,7 @@ export interface BookingEntity {
   createdByUserId: string;
   agencyId?: string;
   supplierId: string;
-  inventorySource: 'MOCK';
+  inventorySource: InventorySource;
   supplierBookingReference: string;
   pnr: string;
   bookingStatus: BookingStatus;

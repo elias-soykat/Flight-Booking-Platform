@@ -18,6 +18,7 @@ export const payments = pgTable('payments', {
   currency: text('currency').notNull().default('USD'),
   paymentStatus: paymentStatusEnum('payment_status').notNull().default('PENDING'),
   providerType: text('provider_type').notNull().default('SIMULATED'),
+  gatewayTransactionId: text('gateway_transaction_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
