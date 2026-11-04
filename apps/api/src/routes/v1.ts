@@ -7,8 +7,10 @@ import { agenciesRouter } from './agencies';
 import { adminRouter } from './admin';
 import { flightsRouter } from './flights';
 import { bookingsRouter } from './bookings';
+import { paymentsRouter } from './payments';
 
 export const v1Router = new Hono<AppContext>();
+
 
 
 v1Router.get('/info', (c) => {
@@ -37,4 +39,6 @@ v1Router.route('/agencies', agenciesRouter);
 v1Router.route('/admin', adminRouter);
 v1Router.route('/flights', flightsRouter);
 v1Router.route('/bookings', bookingsRouter);
+v1Router.route('/payments', paymentsRouter);
+
 
