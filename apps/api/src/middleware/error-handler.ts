@@ -27,3 +27,4 @@ export const errorHandler: ErrorHandler<AppContext> = (err, c) => {
     }
   }, status as 500);
 };
+

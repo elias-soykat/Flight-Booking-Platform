@@ -18,3 +18,4 @@ export type AppContext = {
   Bindings: AppBindings;
   Variables: AppVariables;
 };
+

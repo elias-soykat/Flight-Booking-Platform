@@ -30,3 +30,4 @@ describe('API Health and Base Routes', () => {
     expect(data.error.code).toBe('NOT_FOUND');
   });
 });
+
