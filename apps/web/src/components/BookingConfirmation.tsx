@@ -1,19 +1,23 @@
 import React from 'react';
 import type { BookingEntity, BookingPassengerEntity } from '@travel-platform/shared';
-import { CheckCircle2, Plane, Calendar, User, ArrowRight, ShieldCheck, Copy } from 'lucide-react';
-
+import { CheckCircle2, Plane, Calendar, User, ArrowRight, ShieldCheck, Copy, CreditCard, Ticket } from 'lucide-react';
 
 export interface BookingConfirmationProps {
   booking: BookingEntity;
   onViewAllBookings: () => void;
   onNewSearch: () => void;
+  onPayClick?: () => void;
+  onViewTickets?: () => void;
 }
 
 export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   booking,
   onViewAllBookings,
-  onNewSearch
+  onNewSearch,
+  onPayClick,
+  onViewTickets
 }) => {
+
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyPnr = () => {
@@ -187,12 +191,31 @@ export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
           </button>
           <button
             onClick={onViewAllBookings}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+            className="px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <span>View All Bookings</span>
-            <ArrowRight className="w-4 h-4" />
           </button>
+          {booking.bookingStatus === 'CONFIRMED' && onPayClick && (
+            <button
+              onClick={onPayClick}
+              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Simulate Payment</span>
+            </button>
+          )}
+          {booking.bookingStatus === 'TICKETED' && onViewTickets && (
+            <button
+              onClick={onViewTickets}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+            >
+              <Ticket className="w-4 h-4" />
+              <span>View E-Tickets</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
+
       </div>
     </div>
   );

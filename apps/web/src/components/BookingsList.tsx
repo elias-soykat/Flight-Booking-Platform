@@ -1,21 +1,25 @@
 import React from 'react';
 import type { BookingEntity, BookingPassengerEntity } from '@travel-platform/shared';
-import { Plane, Calendar, User, Ticket, ArrowRight, Loader2 } from 'lucide-react';
-
+import { Plane, Calendar, User, Ticket, ArrowRight, Loader2, CreditCard } from 'lucide-react';
 
 export interface BookingsListProps {
   bookings: BookingEntity[];
   isLoading?: boolean;
   onSelectBooking?: (booking: BookingEntity) => void;
   onNewSearch?: () => void;
+  onPayClick?: (booking: BookingEntity) => void;
+  onViewTickets?: (booking: BookingEntity) => void;
 }
 
 export const BookingsList: React.FC<BookingsListProps> = ({
   bookings,
   isLoading = false,
   onSelectBooking,
-  onNewSearch
+  onNewSearch,
+  onPayClick,
+  onViewTickets
 }) => {
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
@@ -146,19 +150,42 @@ export const BookingsList: React.FC<BookingsListProps> = ({
                   <span className="text-xs text-slate-500 block">{booking.currency}</span>
                 </div>
 
-                {onSelectBooking && (
-                  <button
-                    onClick={() => onSelectBooking(booking)}
-                    className="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-                  >
-                    <span>View Itinerary</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                  {booking.bookingStatus === 'CONFIRMED' && onPayClick && (
+                    <button
+                      onClick={() => onPayClick(booking)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Pay Now</span>
+                    </button>
+                  )}
+
+                  {booking.bookingStatus === 'TICKETED' && onViewTickets && (
+                    <button
+                      onClick={() => onViewTickets(booking)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <Ticket className="w-3.5 h-3.5" />
+                      <span>View Tickets</span>
+                    </button>
+                  )}
+
+                  {onSelectBooking && (
+                    <button
+                      onClick={() => onSelectBooking(booking)}
+                      className="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <span>View Itinerary</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
+
       </div>
     </div>
   );
