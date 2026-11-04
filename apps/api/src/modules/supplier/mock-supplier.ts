@@ -216,7 +216,7 @@ export class MockFlightSupplier implements FlightSupplierAdapter {
     };
   }
 
-  async issueTicket(supplierBookingRef: string): Promise<TicketIssuanceResult> {
+  async issueTicket(_supplierBookingRef: string): Promise<TicketIssuanceResult> {
     // Generate mock 13-digit ticket numbers with 001-DEMO prefix
     const ticketNumber = `001-DEMO-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     return {

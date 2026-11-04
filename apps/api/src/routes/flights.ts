@@ -29,6 +29,7 @@ flightsRouter.get(
         }
       }, 400);
     }
+    return undefined;
   }),
   async (c) => {
     const query = c.req.valid('query');

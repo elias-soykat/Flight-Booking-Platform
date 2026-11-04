@@ -8,7 +8,7 @@ import { FlightSearchForm } from './components/FlightSearchForm';
 import { FlightResults } from './components/FlightResults';
 import type { FlightOffer, FlightSearchQuery } from '@travel-platform/shared';
 import { apiClient } from './lib/api-client';
-import { Plane, Building2, ShieldCheck, CheckCircle2, ArrowRight, Check } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Check } from 'lucide-react';
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState('flights');
@@ -180,6 +180,19 @@ export const App = () => {
         {/* Render Tab Views */}
         {activeTab === 'flights' && (
           <div className="space-y-8">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold uppercase tracking-wider mb-2 border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Demo Search Active &bull; Role: {currentUser.role}
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                Flight-First Travel Booking Platform
+              </h1>
+              <p className="mt-2 text-sm sm:text-base text-slate-600 leading-relaxed">
+                Deterministic mock inventory with multi-airline routes, pricing calculations, and transparent supplier boundaries.
+              </p>
+            </div>
+
             {/* Search Form */}
             <FlightSearchForm onSearch={handleFlightSearch} />
 
