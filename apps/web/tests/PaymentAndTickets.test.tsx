@@ -121,3 +121,4 @@ describe('TicketView Component', () => {
     expect(screen.getByText(/\[DEMO \/ MOCK - NOT A VALID AIRLINE TICKET\]/i)).toBeInTheDocument();
   });
 });
+

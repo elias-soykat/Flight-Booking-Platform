@@ -112,3 +112,4 @@ describe('Admin Fulfillment & Booking Actions Integration', () => {
     expect(handlePayClick).toHaveBeenCalledWith(baseBooking);
   });
 });
+

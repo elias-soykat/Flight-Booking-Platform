@@ -8,6 +8,7 @@ export interface BookingConfirmationProps {
   onNewSearch: () => void;
   onPayClick?: () => void;
   onViewTickets?: () => void;
+  onRequestCancellation?: () => void;
 }
 
 export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
@@ -15,7 +16,8 @@ export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   onViewAllBookings,
   onNewSearch,
   onPayClick,
-  onViewTickets
+  onViewTickets,
+  onRequestCancellation
 }) => {
 
   const [copied, setCopied] = React.useState(false);
@@ -212,6 +214,14 @@ export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
               <Ticket className="w-4 h-4" />
               <span>View E-Tickets</span>
               <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+          {onRequestCancellation && (booking.bookingStatus === 'CONFIRMED' || booking.bookingStatus === 'TICKETED') && (
+            <button
+              onClick={onRequestCancellation}
+              className="px-4 py-2 border border-rose-300 hover:bg-rose-50 text-rose-700 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <span>Request Cancellation</span>
             </button>
           )}
         </div>

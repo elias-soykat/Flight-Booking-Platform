@@ -9,6 +9,7 @@ export interface BookingsListProps {
   onNewSearch?: () => void;
   onPayClick?: (booking: BookingEntity) => void;
   onViewTickets?: (booking: BookingEntity) => void;
+  onRequestCancellation?: (booking: BookingEntity) => void;
 }
 
 export const BookingsList: React.FC<BookingsListProps> = ({
@@ -17,7 +18,8 @@ export const BookingsList: React.FC<BookingsListProps> = ({
   onSelectBooking,
   onNewSearch,
   onPayClick,
-  onViewTickets
+  onViewTickets,
+  onRequestCancellation
 }) => {
 
   if (isLoading) {
@@ -85,6 +87,7 @@ export const BookingsList: React.FC<BookingsListProps> = ({
           const statusColors: Record<string, string> = {
             CONFIRMED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
             TICKETED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            CANCELLATION_PENDING: 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
             PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
             CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200'
           };
@@ -168,6 +171,15 @@ export const BookingsList: React.FC<BookingsListProps> = ({
                     >
                       <Ticket className="w-3.5 h-3.5" />
                       <span>View Tickets</span>
+                    </button>
+                  )}
+
+                  {onRequestCancellation && (booking.bookingStatus === 'CONFIRMED' || booking.bookingStatus === 'TICKETED') && (
+                    <button
+                      onClick={() => onRequestCancellation(booking)}
+                      className="px-3 py-1.5 border border-rose-300 hover:bg-rose-50 text-rose-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <span>Cancel</span>
                     </button>
                   )}
 
