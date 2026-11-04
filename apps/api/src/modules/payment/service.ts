@@ -6,6 +6,7 @@ import type {
 } from '@travel-platform/shared';
 import { bookingService } from '../booking/service';
 import { defaultFlightSupplier } from '../supplier/mock-supplier';
+import { auditService } from '../audit/service';
 
 export class PaymentError extends Error {
   code: string;
@@ -210,6 +211,19 @@ export const paymentService = {
       payment.failureReason = `Reconciled as failed by administrator: ${note}`;
     }
 
+    await auditService.logAction({
+      actorUserId: adminUserId,
+      action: 'PAYMENT_RECONCILED',
+      entityType: 'PAYMENT',
+      entityId: payment.id,
+      metadata: {
+        paymentId: payment.id,
+        bookingId: payment.bookingId,
+        action,
+        note
+      }
+    });
+
     return { payment, tickets };
   },
 
@@ -238,6 +252,16 @@ export const paymentService = {
     await bookingService.updateBookingStatus(booking.id, 'TICKETED', adminUserId, {
       manuallyIssuedBy: adminUserId,
       ticketNumbers: tickets.map(t => t.ticketNumber)
+    });
+
+    await auditService.logAction({
+      actorUserId: adminUserId,
+      action: 'MANUAL_TICKET_ISSUANCE',
+      entityType: 'BOOKING',
+      entityId: bookingId,
+      metadata: {
+        ticketNumbers: tickets.map(t => t.ticketNumber)
+      }
     });
 
     return tickets;
