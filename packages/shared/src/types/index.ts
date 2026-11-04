@@ -123,3 +123,46 @@ export interface SupplierCancellationResult {
   cancellationReference?: string;
   failureReason?: string;
 }
+
+export interface BookingPassengerEntity {
+  id: string;
+  passengerType: PassengerType;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  passportNumber?: string;
+}
+
+export interface BookingEventEntity {
+  id: string;
+  eventType: string;
+  previousStatus: string | null;
+  newStatus: string;
+  actorUserId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface BookingEntity {
+  id: string;
+  bookingReference: string;
+  customerUserId: string;
+  createdByUserId: string;
+  agencyId?: string;
+  supplierId: string;
+  inventorySource: 'MOCK';
+  supplierBookingReference: string;
+  pnr: string;
+  bookingStatus: BookingStatus;
+  currency: string;
+  baseFare: number;
+  markupAmount: number;
+  totalAmount: number;
+  idempotencyKey: string;
+  flightOffer: FlightOffer;
+  passengers: BookingPassengerEntity[];
+  events: BookingEventEntity[];
+  createdAt: string;
+  updatedAt: string;
+}
+

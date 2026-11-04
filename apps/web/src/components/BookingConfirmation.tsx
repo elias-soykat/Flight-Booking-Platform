@@ -1,6 +1,7 @@
 import React from 'react';
-import type { BookingEntity } from '../../../apps/api/src/modules/booking/service';
+import type { BookingEntity, BookingPassengerEntity } from '@travel-platform/shared';
 import { CheckCircle2, Plane, Calendar, User, ArrowRight, ShieldCheck, Copy } from 'lucide-react';
+
 
 export interface BookingConfirmationProps {
   booking: BookingEntity;
@@ -133,8 +134,9 @@ export const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
           </h3>
 
           <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-            {booking.passengers.map((pax) => (
+            {booking.passengers.map((pax: BookingPassengerEntity) => (
               <div key={pax.id} className="p-3.5 bg-white flex items-center justify-between text-sm">
+
                 <div>
                   <span className="font-semibold text-slate-900">
                     {pax.firstName} {pax.lastName}

@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react';
 import './setup';
 import { BookingConfirmation } from '../src/components/BookingConfirmation';
 import { BookingsList } from '../src/components/BookingsList';
-import type { BookingEntity } from '../../../apps/api/src/modules/booking/service';
+import type { BookingEntity } from '@travel-platform/shared';
+
 
 const mockBooking: BookingEntity = {
   id: 'book-test-123',

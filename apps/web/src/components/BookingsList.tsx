@@ -1,6 +1,7 @@
 import React from 'react';
-import type { BookingEntity } from '../../../apps/api/src/modules/booking/service';
+import type { BookingEntity, BookingPassengerEntity } from '@travel-platform/shared';
 import { Plane, Calendar, User, Ticket, ArrowRight, Loader2 } from 'lucide-react';
+
 
 export interface BookingsListProps {
   bookings: BookingEntity[];
@@ -123,7 +124,8 @@ export const BookingsList: React.FC<BookingsListProps> = ({
                     <User className="w-3.5 h-3.5 text-slate-400" />
                     <span>
                       {booking.passengers.length} Passenger{booking.passengers.length > 1 ? 's' : ''} (
-                      {booking.passengers.map(p => `${p.firstName} ${p.lastName}`).join(', ')})
+                      {booking.passengers.map((p: BookingPassengerEntity) => `${p.firstName} ${p.lastName}`).join(', ')})
+
                     </span>
                   </div>
                   <div className="text-slate-500">

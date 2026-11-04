@@ -65,7 +65,7 @@ describe('Booking REST API Endpoints', () => {
     });
 
     expect(res.status).toBe(400);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.error?.code).toBe('MISSING_IDEMPOTENCY_KEY');
   });
 
@@ -93,7 +93,7 @@ describe('Booking REST API Endpoints', () => {
     });
 
     expect(res.status).toBe(201);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.success).toBe(true);
     expect(body.data.id).toBeDefined();
     expect(body.data.bookingReference).toMatch(/^BK-[A-Z0-9]{6}$/);
@@ -112,7 +112,7 @@ describe('Booking REST API Endpoints', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.success).toBe(true);
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data.length).toBeGreaterThanOrEqual(1);
@@ -141,8 +141,9 @@ describe('Booking REST API Endpoints', () => {
         ]
       })
     });
-    const created = await createRes.json();
+    const created: any = await createRes.json();
     const bookingId = created.data.id;
+
 
     // Customer 1 can access their booking
     const res1 = await app.request(`/api/v1/bookings/${bookingId}`, {

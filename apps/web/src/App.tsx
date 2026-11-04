@@ -9,9 +9,9 @@ import { FlightResults } from './components/FlightResults';
 import { PassengerForm } from './components/PassengerForm';
 import { BookingConfirmation } from './components/BookingConfirmation';
 import { BookingsList } from './components/BookingsList';
-import type { FlightOffer, FlightSearchQuery, PassengerInput } from '@travel-platform/shared';
-import type { BookingEntity } from '../../api/src/modules/booking/service';
+import type { FlightOffer, FlightSearchQuery, PassengerInput, BookingEntity } from '@travel-platform/shared';
 import { apiClient } from './lib/api-client';
+
 import { ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const App = () => {
