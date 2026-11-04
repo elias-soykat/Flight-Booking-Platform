@@ -95,7 +95,7 @@ export const CancellationModal: React.FC<CancellationModalProps> = ({
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Itinerary:</span>
               <span className="font-semibold text-slate-800">
-                {offer.originAirport.iataCode} → {offer.destinationAirport.iataCode} ({offer.airline.name})
+                {offer.originAirport.iataCode} → {offer.destinationAirport.iataCode} ({offer.segments?.[0]?.airline?.name || 'Mock Airline'})
               </span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-2">

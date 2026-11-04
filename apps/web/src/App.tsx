@@ -11,6 +11,9 @@ import { BookingConfirmation } from './components/BookingConfirmation';
 import { BookingsList } from './components/BookingsList';
 import { PaymentModal } from './components/PaymentModal';
 import { TicketView } from './components/TicketView';
+import { CancellationModal } from './components/CancellationModal';
+import { CancellationReviewQueue } from './components/CancellationReviewQueue';
+import { AuditLogView } from './components/AuditLogView';
 import type {
   FlightOffer,
   FlightSearchQuery,
@@ -18,10 +21,13 @@ import type {
   BookingEntity,
   TicketEntity,
   PaymentAttemptEntity,
+  CancellationRequestEntity,
+  AuditLogEntity,
+  AdminDashboardMetrics,
   SimulationScenario
 } from '@travel-platform/shared';
 import { apiClient } from './lib/api-client';
-import { ShieldCheck, CheckCircle2, AlertCircle, Ticket, Clock, Check, RefreshCw } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle, Ticket, Clock, Check, RefreshCw, Activity } from 'lucide-react';
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState('flights');
@@ -56,10 +62,17 @@ export const App = () => {
     tickets: TicketEntity[];
   } | null>(null);
 
-  // Admin Operational Queues
+  // Admin Operational Queues & Metrics
+  const [dashboardMetrics, setDashboardMetrics] = useState<AdminDashboardMetrics | null>(null);
+  const [pendingCancellations, setPendingCancellations] = useState<CancellationRequestEntity[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntity[]>([]);
   const [ticketingQueue, setTicketingQueue] = useState<BookingEntity[]>([]);
   const [unreconciledPayments, setUnreconciledPayments] = useState<PaymentAttemptEntity[]>([]);
   const [adminActionMessage, setAdminActionMessage] = useState<string | null>(null);
+
+  // Cancellation Modal State
+  const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+  const [bookingForCancellation, setBookingForCancellation] = useState<BookingEntity | null>(null);
 
   // Agency demo state
   const [agency, setAgency] = useState<AgencyInfo | null>({
@@ -114,7 +127,7 @@ export const App = () => {
       fetchBookings();
     }
     if (activeTab === 'admin' && currentUser.role === 'ADMIN') {
-      fetchAdminQueues();
+      fetchAdminDashboard();
     }
   }, [activeTab, currentUser]);
 
@@ -135,23 +148,31 @@ export const App = () => {
     }
   };
 
-  const fetchAdminQueues = async () => {
+  const fetchAdminDashboard = async () => {
     try {
-      const qRes = await apiClient.get<{ success: boolean; data: BookingEntity[] }>('/admin/ticketing-queue', {
-        headers: {
-          'x-demo-user-id': currentUser.userId,
-          'x-demo-role': 'ADMIN'
-        }
-      });
-      setTicketingQueue(qRes.data || []);
+      const [dashRes, cancelRes, auditRes, qRes, pRes] = await Promise.all([
+        apiClient.get<{ success: boolean; data: AdminDashboardMetrics }>('/admin/dashboard', {
+          headers: { 'x-demo-user-id': currentUser.userId, 'x-demo-role': 'ADMIN' }
+        }).catch(() => null),
+        apiClient.get<{ success: boolean; data: CancellationRequestEntity[] }>('/admin/cancellations', {
+          headers: { 'x-demo-user-id': currentUser.userId, 'x-demo-role': 'ADMIN' }
+        }).catch(() => null),
+        apiClient.get<{ success: boolean; data: AuditLogEntity[] }>('/admin/audit-logs', {
+          headers: { 'x-demo-user-id': currentUser.userId, 'x-demo-role': 'ADMIN' }
+        }).catch(() => null),
+        apiClient.get<{ success: boolean; data: BookingEntity[] }>('/admin/ticketing-queue', {
+          headers: { 'x-demo-user-id': currentUser.userId, 'x-demo-role': 'ADMIN' }
+        }).catch(() => null),
+        apiClient.get<{ success: boolean; data: PaymentAttemptEntity[] }>('/payments/unreconciled', {
+          headers: { 'x-demo-user-id': currentUser.userId, 'x-demo-role': 'ADMIN' }
+        }).catch(() => null)
+      ]);
 
-      const pRes = await apiClient.get<{ success: boolean; data: PaymentAttemptEntity[] }>('/payments/unreconciled', {
-        headers: {
-          'x-demo-user-id': currentUser.userId,
-          'x-demo-role': 'ADMIN'
-        }
-      });
-      setUnreconciledPayments(pRes.data || []);
+      if (dashRes?.data) setDashboardMetrics(dashRes.data);
+      if (cancelRes?.data) setPendingCancellations(cancelRes.data);
+      if (auditRes?.data) setAuditLogs(auditRes.data);
+      if (qRes?.data) setTicketingQueue(qRes.data);
+      if (pRes?.data) setUnreconciledPayments(pRes.data);
     } catch {
       // Ignored for standalone mode
     }
@@ -304,7 +325,7 @@ export const App = () => {
         }
       );
       setAdminActionMessage(`Successfully issued mock tickets for booking ${bookingId}`);
-      fetchAdminQueues();
+      fetchAdminDashboard();
       fetchBookings();
     } catch (err: unknown) {
       setAdminActionMessage(err instanceof Error ? err.message : 'Failed to issue tickets');
@@ -327,10 +348,62 @@ export const App = () => {
         }
       );
       setAdminActionMessage(`Payment ${paymentId} reconciled as ${action}`);
-      fetchAdminQueues();
+      fetchAdminDashboard();
       fetchBookings();
     } catch (err: unknown) {
       setAdminActionMessage(err instanceof Error ? err.message : 'Reconciliation failed');
+    }
+  };
+
+  const handleOpenCancellation = (booking: BookingEntity) => {
+    setBookingForCancellation(booking);
+    setIsCancellationModalOpen(true);
+  };
+
+  const handleSubmitCancellation = async (bookingId: string, reason: string) => {
+    await apiClient.post(
+      `/bookings/${bookingId}/cancellation-requests`,
+      { reason },
+      {
+        headers: {
+          'x-demo-user-id': currentUser.userId,
+          'x-demo-role': currentUser.role
+        }
+      }
+    );
+    if (activeBooking && activeBooking.id === bookingId) {
+      setActiveBooking({
+        ...activeBooking,
+        bookingStatus: 'CANCELLATION_PENDING'
+      });
+    }
+    await fetchBookings();
+    if (currentUser.role === 'ADMIN') {
+      await fetchAdminDashboard();
+    }
+  };
+
+  const handleAdminReviewCancellation = async (
+    requestId: string,
+    decision: 'APPROVE' | 'REJECT',
+    reviewNote?: string
+  ) => {
+    try {
+      await apiClient.post(
+        `/admin/cancellations/${requestId}/review`,
+        { decision, reviewNote },
+        {
+          headers: {
+            'x-demo-user-id': currentUser.userId,
+            'x-demo-role': 'ADMIN'
+          }
+        }
+      );
+      setAdminActionMessage(`Cancellation request ${requestId} was successfully ${decision.toLowerCase()}d.`);
+      await fetchAdminDashboard();
+      await fetchBookings();
+    } catch (err: unknown) {
+      setAdminActionMessage(err instanceof Error ? err.message : 'Failed to review cancellation');
     }
   };
 
@@ -510,6 +583,7 @@ export const App = () => {
                   const tkts = await fetchTicketsForBooking(activeBooking.id);
                   setViewingTickets({ booking: activeBooking, tickets: tkts });
                 }}
+                onRequestCancellation={() => handleOpenCancellation(activeBooking)}
               />
             ) : (
               <BookingsList
@@ -525,6 +599,7 @@ export const App = () => {
                   const tkts = await fetchTicketsForBooking(b.id);
                   setViewingTickets({ booking: b, tickets: tkts });
                 }}
+                onRequestCancellation={(b) => handleOpenCancellation(b)}
               />
             )}
           </div>
@@ -548,14 +623,14 @@ export const App = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-6 h-6 text-purple-600" />
-                  <h2 className="text-xl font-bold text-slate-900">Admin Inspection Console</h2>
+                  <h2 className="text-xl font-bold text-slate-900">Admin Inspection & Operations Console</h2>
                 </div>
                 <button
-                  onClick={fetchAdminQueues}
-                  className="px-3 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                  onClick={fetchAdminDashboard}
+                  className="px-3 py-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Refresh Queues</span>
+                  <span>Refresh Dashboard</span>
                 </button>
               </div>
 
@@ -566,25 +641,65 @@ export const App = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs uppercase font-bold text-slate-500">Agencies</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{agency ? 1 : 0}</p>
+              {/* Real-time Dynamic Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-4">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[11px] uppercase font-bold text-slate-500">Total Bookings</span>
+                  <p className="text-2xl font-black text-slate-900 mt-0.5">{dashboardMetrics?.totalBookings ?? bookings.length}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-xs uppercase font-bold text-slate-500">Associations</span>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{associatedCustomers.length}</p>
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                  <span className="text-[11px] uppercase font-bold text-emerald-800">Confirmed</span>
+                  <p className="text-2xl font-black text-emerald-950 mt-0.5">
+                    {dashboardMetrics?.confirmedBookings ?? bookings.filter(b => b.bookingStatus === 'CONFIRMED').length}
+                  </p>
                 </div>
-                <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200">
-                  <span className="text-xs uppercase font-bold text-amber-800">Ticketing Queue</span>
-                  <p className="text-2xl font-bold text-amber-950 mt-1">{ticketingQueue.length}</p>
+                <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200">
+                  <span className="text-[11px] uppercase font-bold text-indigo-800">Ticketed</span>
+                  <p className="text-2xl font-black text-indigo-950 mt-0.5">
+                    {dashboardMetrics?.ticketedBookings ?? bookings.filter(b => b.bookingStatus === 'TICKETED').length}
+                  </p>
                 </div>
-                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200">
-                  <span className="text-xs uppercase font-bold text-purple-800">Unreconciled Payments</span>
-                  <p className="text-2xl font-bold text-purple-950 mt-1">{unreconciledPayments.length}</p>
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-300">
+                  <span className="text-[11px] uppercase font-bold text-amber-800">Pending Cancellations</span>
+                  <p className="text-2xl font-black text-amber-950 mt-0.5">
+                    {dashboardMetrics?.pendingCancellations ?? pendingCancellations.length}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200">
+                  <span className="text-[11px] uppercase font-bold text-rose-800">Cancelled Bookings</span>
+                  <p className="text-2xl font-black text-rose-950 mt-0.5">
+                    {dashboardMetrics?.cancelledBookings ?? bookings.filter(b => b.bookingStatus === 'CANCELLED').length}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-purple-50/60 border border-purple-200">
+                  <span className="text-[11px] uppercase font-bold text-purple-800">Unreconciled Payments</span>
+                  <p className="text-2xl font-black text-purple-950 mt-0.5">
+                    {dashboardMetrics?.unreconciledPayments ?? unreconciledPayments.length}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-rose-50/40 border border-rose-200">
+                  <span className="text-[11px] uppercase font-bold text-rose-700">Failed Payments</span>
+                  <p className="text-2xl font-black text-rose-900 mt-0.5">
+                    {dashboardMetrics?.failedPayments ?? 0}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-indigo-600 text-white shadow-sm border border-indigo-700">
+                  <span className="text-[11px] uppercase font-bold text-indigo-200 flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>Interventions Needed</span>
+                  </span>
+                  <p className="text-2xl font-black text-white mt-0.5">
+                    {dashboardMetrics?.operationalInterventionsRequired ?? (pendingCancellations.length + unreconciledPayments.length + ticketingQueue.length)}
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* Cancellation Review Queue */}
+            <CancellationReviewQueue
+              cancellations={pendingCancellations}
+              onReview={handleAdminReviewCancellation}
+            />
 
             {/* Ticketing Operations Queue */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
@@ -679,36 +794,39 @@ export const App = () => {
                 </div>
               )}
             </div>
+
+            {/* Audit Log Trail */}
+            <AuditLogView logs={auditLogs} onRefresh={fetchAdminDashboard} />
           </div>
         )}
 
         {/* Milestone Features Checklist */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 5: Payment Processing & Simulated Ticketing</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 6: Administrative Operations, Metrics Dashboard & Cancellation Requests</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Simulated payment engine with test scenarios (SUCCESS, DECLINE, TIMEOUT)</span>
+              <span>Cancellation requests with reason validation and CANCELLATION_PENDING status</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Safe payment retries with client-supplied UUID idempotency keys</span>
+              <span>Admin cancellation review queue with approval (supplier release) & rejection (revert)</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>13-digit mock ticket numbers (001-DEMO-XXXXXXXXXX) for each passenger</span>
+              <span>Real-time platform metrics dashboard derived dynamically from live records</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Automatic ticketing vs. administrative manual fulfillment queue</span>
+              <span>Comprehensive immutable audit logging trail with actor ID and metadata</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Payment reconciliation workflow for uncertain timeout transactions</span>
+              <span>Simulated payment engine, reconciliation, and 13-digit mock ticket fulfillment</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Clear [DEMO / MOCK - NOT A VALID AIRLINE TICKET] disclaimers</span>
+              <span>Transparent [DEMO / MOCK] disclaimers across inventory, bookings, and refunds</span>
             </div>
           </div>
         </div>
@@ -726,6 +844,19 @@ export const App = () => {
           }}
           isProcessing={isProcessingPayment}
           errorMessage={paymentError}
+        />
+      )}
+
+      {/* Cancellation Request Modal */}
+      {isCancellationModalOpen && bookingForCancellation && (
+        <CancellationModal
+          booking={bookingForCancellation}
+          isOpen={isCancellationModalOpen}
+          onClose={() => {
+            setIsCancellationModalOpen(false);
+            setBookingForCancellation(null);
+          }}
+          onSubmit={handleSubmitCancellation}
         />
       )}
 
