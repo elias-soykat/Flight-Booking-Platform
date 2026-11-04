@@ -1,11 +1,19 @@
-import { Plane, Building2, ShieldCheck, User } from 'lucide-react';
+import { Plane, Building2, ShieldCheck } from 'lucide-react';
+import { UserSwitcher, type DemoUserSession } from './UserSwitcher';
 
 interface NavbarProps {
   currentTab?: string;
   onTabChange?: (tab: string) => void;
+  currentUser: DemoUserSession;
+  onUserChange: (user: DemoUserSession) => void;
 }
 
-export const Navbar = ({ currentTab = 'flights', onTabChange }: NavbarProps) => {
+export const Navbar = ({
+  currentTab = 'flights',
+  onTabChange,
+  currentUser,
+  onUserChange
+}: NavbarProps) => {
   const navItems = [
     { id: 'flights', label: 'Flights', icon: Plane },
     { id: 'agency', label: 'Agency Portal', icon: Building2 },
@@ -51,12 +59,9 @@ export const Navbar = ({ currentTab = 'flights', onTabChange }: NavbarProps) => 
             })}
           </nav>
 
-          {/* User Account / Role simulation */}
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600">
-              <User className="w-4 h-4" />
-            </div>
-            <span className="hidden sm:inline font-medium">Demo Customer</span>
+          {/* Role Switcher */}
+          <div className="flex items-center gap-2">
+            <UserSwitcher currentUser={currentUser} onSelectUser={onUserChange} />
           </div>
         </div>
       </div>
