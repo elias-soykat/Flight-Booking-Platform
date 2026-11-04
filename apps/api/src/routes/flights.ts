@@ -2,10 +2,11 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { AppContext } from '../types/env';
 import { AIRPORT_FIXTURES, FlightSearchQuerySchema } from '@travel-platform/shared';
-import { MockFlightSupplier } from '../modules/supplier/mock-supplier';
+import { defaultFlightSupplier } from '../modules/supplier/mock-supplier';
 
 export const flightsRouter = new Hono<AppContext>();
-const defaultSupplier = new MockFlightSupplier();
+const defaultSupplier = defaultFlightSupplier;
+
 
 // List available reference airports
 flightsRouter.get('/airports', (c) => {

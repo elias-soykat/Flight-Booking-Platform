@@ -232,3 +232,6 @@ export class MockFlightSupplier implements FlightSupplierAdapter {
     };
   }
 }
+
+export const defaultFlightSupplier = new MockFlightSupplier();
+
