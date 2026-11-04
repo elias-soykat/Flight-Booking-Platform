@@ -167,13 +167,12 @@ export const AgencyPortal = ({
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-semibold text-slate-900 truncate max-w-[150px]">{inv.email}</span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                          inv.status === 'ACCEPTED'
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${inv.status === 'ACCEPTED'
                             ? 'bg-emerald-100 text-emerald-800'
                             : inv.status === 'REJECTED'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
                       >
                         {inv.status}
                       </span>
@@ -246,3 +245,4 @@ export const AgencyPortal = ({
     </div>
   );
 };
+

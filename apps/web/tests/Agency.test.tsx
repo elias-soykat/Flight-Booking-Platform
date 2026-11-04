@@ -67,3 +67,4 @@ describe('Agency Portal & Customer Invitations UI', () => {
     expect(handleAccept).toHaveBeenCalledWith('inv-1');
   });
 });
+
