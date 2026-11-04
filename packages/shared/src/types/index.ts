@@ -166,3 +166,31 @@ export interface BookingEntity {
   updatedAt: string;
 }
 
+export interface PaymentAttemptEntity {
+  id: string;
+  bookingId: string;
+  paymentReference: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  scenario: SimulationScenario;
+  failureReason?: string;
+  idempotencyKey: string;
+  reconciledAt?: string;
+  reconciliationNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketEntity {
+  id: string;
+  bookingId: string;
+  passengerId: string;
+  passengerName: string;
+  ticketNumber: string;
+  issuanceMethod: TicketIssuanceMethod;
+  issuedByUserId?: string;
+  issuedAt: string;
+}
+
+
