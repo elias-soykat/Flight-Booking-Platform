@@ -37,3 +37,4 @@ describe('Admin User & Agency Inspection Routes', () => {
     expect(Array.isArray(agenciesBody.data)).toBe(true);
   });
 });
+

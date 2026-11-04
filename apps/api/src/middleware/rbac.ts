@@ -30,3 +30,4 @@ export function requireRole(...allowedRoles: UserRole[]): MiddlewareHandler<AppC
     return next();
   };
 }
+

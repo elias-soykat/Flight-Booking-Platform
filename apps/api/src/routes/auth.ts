@@ -27,3 +27,4 @@ authRouter.get(
     });
   }
 );
+

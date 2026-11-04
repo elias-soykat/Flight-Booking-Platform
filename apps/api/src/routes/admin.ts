@@ -24,3 +24,4 @@ adminRouter.get('/agencies', async (c) => {
     data: agencies
   });
 });
+

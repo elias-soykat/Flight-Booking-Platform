@@ -76,3 +76,50 @@ export interface FlightOffer {
   expiresAt: string;
 }
 
+export interface FlightSearchCriteria {
+  origin: string;
+  destination: string;
+  departureDate: string;
+  returnDate?: string;
+  passengerCount: number;
+  cabinClass: CabinClass;
+}
+
+export interface FareValidationResult {
+  valid: boolean;
+  priceChanged: boolean;
+  oldBaseFare?: number;
+  newBaseFare?: number;
+  availabilityChanged: boolean;
+  reason?: string;
+}
+
+export interface CreateReservationRequest {
+  offerReference: string;
+  passengers: Array<{
+    passengerType: PassengerType;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    passportNumber?: string;
+  }>;
+}
+
+export interface ReservationResult {
+  success: boolean;
+  supplierBookingReference?: string;
+  pnr?: string;
+  failureReason?: string;
+}
+
+export interface TicketIssuanceResult {
+  success: boolean;
+  ticketNumbers: string[];
+  failureReason?: string;
+}
+
+export interface SupplierCancellationResult {
+  success: boolean;
+  cancellationReference?: string;
+  failureReason?: string;
+}

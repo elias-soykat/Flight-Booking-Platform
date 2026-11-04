@@ -58,3 +58,4 @@ export const authMiddleware: MiddlewareHandler<AppContext> = async (c, next) => 
 
   return next();
 };
+
