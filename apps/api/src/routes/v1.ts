@@ -3,6 +3,7 @@ import type { AppContext } from '../types/env';
 import { MOCK_DEMO_NOTICE, DEFAULT_CURRENCY } from '@travel-platform/shared';
 import { authRouter } from './auth';
 import { customersRouter } from './customers';
+import { agenciesRouter } from './agencies';
 
 export const v1Router = new Hono<AppContext>();
 
@@ -28,3 +29,4 @@ v1Router.get('/info', (c) => {
 
 v1Router.route('/auth', authRouter);
 v1Router.route('/customers', customersRouter);
+v1Router.route('/agencies', agenciesRouter);
