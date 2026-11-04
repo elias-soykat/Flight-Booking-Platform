@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import type { AppContext } from './types/env';
 import { errorHandler } from './middleware/error-handler';
+import { authMiddleware } from './middleware/auth';
 import { healthRouter } from './routes/health';
 import { v1Router } from './routes/v1';
 
@@ -13,8 +14,9 @@ app.use('*', logger());
 app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key']
+  allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'x-demo-user-id', 'x-demo-role', 'x-demo-agency-id']
 }));
+app.use('*', authMiddleware);
 
 // Error handling
 app.onError(errorHandler);
@@ -35,4 +37,3 @@ app.notFound((c) => {
 });
 
 export default app;
-

@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types/env';
 import { MOCK_DEMO_NOTICE, DEFAULT_CURRENCY } from '@travel-platform/shared';
+import { authRouter } from './auth';
+import { customersRouter } from './customers';
 
 export const v1Router = new Hono<AppContext>();
 
@@ -13,6 +15,8 @@ v1Router.get('/info', (c) => {
     defaultCurrency: c.env?.PLATFORM_CURRENCY || DEFAULT_CURRENCY,
     endpoints: {
       health: '/health',
+      auth: '/api/v1/auth',
+      customers: '/api/v1/customers',
       flights: '/api/v1/flights',
       bookings: '/api/v1/bookings',
       payments: '/api/v1/payments',
@@ -22,3 +26,5 @@ v1Router.get('/info', (c) => {
   });
 });
 
+v1Router.route('/auth', authRouter);
+v1Router.route('/customers', customersRouter);
