@@ -6,9 +6,13 @@ import { AgencyPortal, type AgencyInfo, type AgencyInvitation, type AssociatedCu
 import { CustomerInvitations, type CustomerAgencyInvitation, type ActiveAgencyMembership } from './components/CustomerInvitations';
 import { FlightSearchForm } from './components/FlightSearchForm';
 import { FlightResults } from './components/FlightResults';
-import type { FlightOffer, FlightSearchQuery } from '@travel-platform/shared';
+import { PassengerForm } from './components/PassengerForm';
+import { BookingConfirmation } from './components/BookingConfirmation';
+import { BookingsList } from './components/BookingsList';
+import type { FlightOffer, FlightSearchQuery, PassengerInput } from '@travel-platform/shared';
+import type { BookingEntity } from '../../api/src/modules/booking/service';
 import { apiClient } from './lib/api-client';
-import { ShieldCheck, CheckCircle2, Check } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const App = () => {
   const [activeTab, setActiveTab] = useState('flights');
@@ -26,6 +30,13 @@ export const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<FlightOffer | null>(null);
 
+  // Booking state
+  const [bookings, setBookings] = useState<BookingEntity[]>([]);
+  const [activeBooking, setActiveBooking] = useState<BookingEntity | null>(null);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
   // Agency demo state
   const [agency, setAgency] = useState<AgencyInfo | null>({
     id: 'agency-demo-1',
@@ -41,7 +52,16 @@ export const App = () => {
       rawToken: 'demo-token-1234567890abcdef1234567890abcdef'
     }
   ]);
-  const [associatedCustomers, setAssociatedCustomers] = useState<AssociatedCustomer[]>([]);
+  const [associatedCustomers, setAssociatedCustomers] = useState<AssociatedCustomer[]>([
+    {
+      membershipId: 'mem-demo-1',
+      customerUserId: DEMO_USERS.CUSTOMER.userId,
+      email: DEMO_USERS.CUSTOMER.email,
+      firstName: 'Alice',
+      lastName: 'Traveler',
+      associatedAt: new Date().toISOString()
+    }
+  ]);
 
   // Customer invitations state
   const [customerInvitations, setCustomerInvitations] = useState<CustomerAgencyInvitation[]>([
@@ -63,6 +83,30 @@ export const App = () => {
       handleFlightSearch(searchCriteria);
     }
   }, []);
+
+  // Fetch bookings when tab or user changes
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      fetchBookings();
+    }
+  }, [activeTab, currentUser]);
+
+  const fetchBookings = async () => {
+    setIsLoadingBookings(true);
+    try {
+      const response = await apiClient.get<{ success: boolean; data: BookingEntity[] }>('/bookings', {
+        headers: {
+          'x-demo-user-id': currentUser.userId,
+          'x-demo-role': currentUser.role
+        }
+      });
+      setBookings(response.data || []);
+    } catch {
+      // Keep existing bookings state during mock/unit test mode
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
 
   const handleFlightSearch = async (criteria: FlightSearchQuery) => {
     setSearchCriteria(criteria);
@@ -86,10 +130,48 @@ export const App = () => {
       );
       setFlightOffers(response.data || []);
     } catch {
-      // Fallback for standalone/mock demo if API server is not active during unit tests
       setFlightOffers([]);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleBookingSubmit = async (data: {
+    passengers: PassengerInput[];
+    customerUserId?: string;
+  }) => {
+    if (!selectedOffer) return;
+    setIsSubmittingBooking(true);
+    setBookingError(null);
+
+    try {
+      const idempotencyKey = `idem-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const response = await apiClient.post<{ success: boolean; data: BookingEntity }>(
+        '/bookings',
+        {
+          offerId: selectedOffer.id,
+          passengers: data.passengers,
+          customerUserId: data.customerUserId
+        },
+        {
+          headers: {
+            'Idempotency-Key': idempotencyKey,
+            'x-demo-user-id': currentUser.userId,
+            'x-demo-role': currentUser.role
+          }
+        }
+      );
+
+      const createdBooking = response.data;
+      setBookings(prev => [createdBooking, ...prev]);
+      setActiveBooking(createdBooking);
+      setSelectedOffer(null);
+      setActiveTab('bookings');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to confirm booking';
+      setBookingError(msg);
+    } finally {
+      setIsSubmittingBooking(false);
     }
   };
 
@@ -171,7 +253,12 @@ export const App = () => {
       <DemoBanner />
       <Navbar
         currentTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (tab !== 'bookings') {
+            setActiveBooking(null);
+          }
+        }}
         currentUser={currentUser}
         onUserChange={setCurrentUser}
       />
@@ -196,38 +283,35 @@ export const App = () => {
             {/* Search Form */}
             <FlightSearchForm onSearch={handleFlightSearch} />
 
-            {/* Selected Offer Toast / Confirmation */}
-            {selectedOffer && (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
-                    <Check className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-emerald-950 text-sm">
-                      Flight Selected: {selectedOffer.originAirport.iataCode} &rarr; {selectedOffer.destinationAirport.iataCode} (${selectedOffer.totalAmount.toFixed(2)})
-                    </h4>
-                    <p className="text-xs text-emerald-700">
-                      Offer reference: {selectedOffer.supplierOfferReference} &bull; Ready for Milestone 4 (Booking Engine & Passenger Information)
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedOffer(null)}
-                  className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 px-3 py-1.5 rounded-lg border border-emerald-300 bg-white"
-                >
-                  Change Selection
-                </button>
+            {/* Error Message */}
+            {bookingError && (
+              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                <span>{bookingError}</span>
               </div>
             )}
 
+            {/* Passenger Checkout Form Modal / Section */}
+            {selectedOffer && (
+              <PassengerForm
+                offer={selectedOffer}
+                userRole={currentUser.role}
+                associatedCustomers={associatedCustomers}
+                onSubmit={handleBookingSubmit}
+                onCancel={() => setSelectedOffer(null)}
+                isSubmitting={isSubmittingBooking}
+              />
+            )}
+
             {/* Results List */}
-            <FlightResults
-              offers={flightOffers}
-              searchCriteria={searchCriteria}
-              onSelectOffer={setSelectedOffer}
-              isLoading={isSearching}
-            />
+            {!selectedOffer && (
+              <FlightResults
+                offers={flightOffers}
+                searchCriteria={searchCriteria}
+                onSelectOffer={setSelectedOffer}
+                isLoading={isSearching}
+              />
+            )}
 
             {/* Customer Invitations card if currently logged in as Customer */}
             {currentUser.role === 'CUSTOMER' && (
@@ -236,6 +320,29 @@ export const App = () => {
                 activeMembership={activeMembership}
                 onAccept={handleAcceptInvite}
                 onReject={handleRejectInvite}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Bookings View */}
+        {activeTab === 'bookings' && (
+          <div>
+            {activeBooking ? (
+              <BookingConfirmation
+                booking={activeBooking}
+                onViewAllBookings={() => setActiveBooking(null)}
+                onNewSearch={() => {
+                  setActiveBooking(null);
+                  setActiveTab('flights');
+                }}
+              />
+            ) : (
+              <BookingsList
+                bookings={bookings}
+                isLoading={isLoadingBookings}
+                onSelectBooking={(b) => setActiveBooking(b)}
+                onNewSearch={() => setActiveTab('flights')}
               />
             )}
           </div>
@@ -275,31 +382,31 @@ export const App = () => {
 
         {/* Milestone Features Checklist */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 3: Flight Search & Deterministic Inventory</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Milestone 4: Booking Engine & Pricing Snapshot</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>FlightSupplierAdapter interface decoupled from specific suppliers</span>
+              <span>Idempotent booking creation with client-supplied UUID idempotency keys</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Deterministic MockFlightSupplier with multi-airline routes</span>
+              <span>Immutable price snapshots guaranteeing fare stability across lifecycle</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Direct and connecting flights with layovers and durations</span>
+              <span>Airline mock PNR generation and human-readable BK-XXXXXX references</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Pricing engine calculating 10% markup and total customer price</span>
+              <span>Direct customer booking and agency-assisted booking with tenancy validation</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Visible [DEMO / MOCK] indicator on all flight cards</span>
+              <span>Passenger checkout form with passenger types and DOB validation</span>
             </div>
             <div className="flex items-center gap-2.5 text-slate-700">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>Responsive search form with airport autocomplete & validation</span>
+              <span>Booking confirmation view with copyable PNR and bookings history</span>
             </div>
           </div>
         </div>

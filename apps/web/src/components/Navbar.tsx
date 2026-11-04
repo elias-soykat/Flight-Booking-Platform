@@ -1,4 +1,4 @@
-import { Plane, Building2, ShieldCheck } from 'lucide-react';
+import { Plane, Building2, ShieldCheck, Ticket } from 'lucide-react';
 import { UserSwitcher, type DemoUserSession } from './UserSwitcher';
 
 interface NavbarProps {
@@ -16,9 +16,11 @@ export const Navbar = ({
 }: NavbarProps) => {
   const navItems = [
     { id: 'flights', label: 'Flights', icon: Plane },
+    { id: 'bookings', label: 'My Bookings', icon: Ticket },
     { id: 'agency', label: 'Agency Portal', icon: Building2 },
     { id: 'admin', label: 'Admin Dashboard', icon: ShieldCheck }
   ];
+
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
