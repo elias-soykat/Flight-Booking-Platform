@@ -15,3 +15,4 @@ export const RespondInvitationSchema = z.object({
 export type CreateAgencyInput = z.infer<typeof CreateAgencySchema>;
 export type InviteCustomerInput = z.infer<typeof InviteCustomerSchema>;
 export type RespondInvitationInput = z.infer<typeof RespondInvitationSchema>;
+

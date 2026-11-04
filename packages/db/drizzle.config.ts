@@ -8,3 +8,4 @@ export default defineConfig({
     url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/travel_platform'
   }
 });
+

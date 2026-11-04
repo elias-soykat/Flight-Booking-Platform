@@ -44,3 +44,4 @@ export const flightSegments = pgTable('flight_segments', {
   baggageAllowance: text('baggage_allowance').notNull().default('1x23kg'),
   segmentOrder: integer('segment_order').notNull().default(1)
 });
+

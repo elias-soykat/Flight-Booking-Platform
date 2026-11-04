@@ -34,3 +34,4 @@ export * from './schema/payments';
 export * from './schema/tickets';
 export * from './schema/audit';
 export * from './seeds/initial-fixtures';
+

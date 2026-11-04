@@ -38,3 +38,4 @@ export const agencyInvitations = pgTable('agency_invitations', {
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
+

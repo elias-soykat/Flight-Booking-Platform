@@ -75,3 +75,4 @@ export interface FlightOffer {
   inventorySource: 'MOCK';
   expiresAt: string;
 }
+

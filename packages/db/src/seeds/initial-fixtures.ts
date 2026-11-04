@@ -21,3 +21,4 @@ export async function seedReferenceFixtures(db: PostgresJsDatabase<Record<string
     }).onConflictDoNothing();
   }
 }
+

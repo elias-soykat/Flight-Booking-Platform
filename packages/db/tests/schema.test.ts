@@ -37,3 +37,4 @@ describe('Database Schema Definitions', () => {
     expect(agencyMemberships.status).toBeDefined();
   });
 });
+

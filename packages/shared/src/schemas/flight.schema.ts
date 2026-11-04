@@ -21,3 +21,4 @@ export const FlightSearchQuerySchema = z.object({
 });
 
 export type FlightSearchQuery = z.infer<typeof FlightSearchQuerySchema>;
+

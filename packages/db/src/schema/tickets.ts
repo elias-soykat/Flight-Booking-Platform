@@ -15,3 +15,4 @@ export const tickets = pgTable('tickets', {
   issuedBy: uuid('issued_by').references(() => users.id),
   issuedAt: timestamp('issued_at', { withTimezone: true }).defaultNow().notNull()
 });
+

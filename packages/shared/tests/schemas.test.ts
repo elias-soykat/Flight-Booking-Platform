@@ -77,3 +77,4 @@ describe('Shared Domain Schemas & Constants', () => {
     expect(AIRPORT_FIXTURES.some(a => a.iataCode === 'JFK')).toBe(true);
   });
 });
+

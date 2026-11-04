@@ -32,3 +32,4 @@ export const paymentAttempts = pgTable('payment_attempts', {
   reconciliationStatus: text('reconciliation_status'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
+

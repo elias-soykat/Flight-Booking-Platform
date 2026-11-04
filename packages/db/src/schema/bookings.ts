@@ -53,3 +53,4 @@ export const bookingEvents = pgTable('booking_events', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
+

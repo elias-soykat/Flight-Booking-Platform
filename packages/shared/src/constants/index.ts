@@ -26,3 +26,4 @@ export const AIRLINE_FIXTURES: Airline[] = [
   { id: 'al-ua', code: 'UA', name: 'United Airlines' },
   { id: 'al-dl', code: 'DL', name: 'Delta Air Lines' }
 ];
+
