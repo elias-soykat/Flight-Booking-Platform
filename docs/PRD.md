@@ -1,1361 +1,1298 @@
-# Product Requirements Document (PRD)
-## AI-Powered Travel Booking & Distribution Platform
+# PRD: Travel Booking Platform — MVP
 
-**Version:** 1.0 — MVP  
-**Product type:** API-first travel booking platform with AI assistance  
-**Stage:** Initial MVP / Sandbox launch  
-**Primary objective:** Build a working, deployable travel platform with zero initial infrastructure expenditure.
+**Document status:** Development-ready MVP specification  
+**Version:** 1.0  
+**Product stage:** Initial MVP  
+**Initial development budget:** $0  
+**Primary objective:** Build a functional, demonstrable flight booking platform that establishes the technical foundation for a future multi-supplier travel technology business.
 
 ---
 
-# 1. Product Overview
+## 1. Product Overview
 
-## 1.1 Product vision
+### 1.1 Product Vision
 
-Build an AI-enabled travel booking platform that allows users to search, compare, and book flights, discover hotels, manage reservations, and receive personalized travel assistance.
+Build a flight-first travel booking platform that allows customers to search flights, select fares, provide passenger information, complete a simulated payment, and manage their bookings.
 
-The platform should be built around a flexible supplier integration architecture, allowing multiple airline, hotel, GDS, and travel API providers to be connected through a unified interface.
+The platform also supports travel agencies. Agency owners can invite customers, associate customers with their agency, and create bookings on behalf of those customers.
 
-The product should eventually support:
+The backend provides a supplier-independent booking architecture, pricing calculations, booking lifecycle management, payment reconciliation, and administrative ticket fulfillment.
 
-- B2C travel booking.
-- B2B travel agency and reseller operations.
-- White-label travel booking experiences.
-- Multi-supplier inventory.
-- Multi-currency pricing.
-- AI-assisted travel planning and booking.
+The initial implementation uses a deterministic mock flight supplier and simulated payment processing. The architecture must allow real suppliers and payment providers to be introduced later without redesigning the entire application.
 
-**MVP assumption:** Start with a single customer-facing booking experience and an internal admin dashboard. Build the underlying architecture to support B2B and white-label expansion, but do not build every business model in the first release.
+### 1.2 Product Objectives
 
-## 1.2 Product objectives
+1. Deliver a complete flight search-to-booking experience.
+2. Support direct customers and agency-assisted customer bookings.
+3. Demonstrate a reliable booking lifecycle.
+4. Establish supplier-independent integration boundaries.
+5. Demonstrate pricing and markup calculations.
+6. Handle payment failures and reconciliation safely.
+7. Provide administrative control over booking fulfillment.
+8. Build a deployable application with zero initial infrastructure expenditure.
 
-1. Provide a complete flight search and booking journey using a sandbox supplier.
-2. Create a supplier-independent integration architecture.
-3. Support flight availability, fare pricing, revalidation, reservations, and booking status.
-4. Build a foundation for hotel booking.
-5. Support multiple currencies and configurable pricing rules.
-6. Provide an AI travel assistant that can search and explain travel options.
-7. Give administrators control over suppliers, bookings, users, and pricing.
-8. Deploy the complete application using free infrastructure.
-9. Make it possible to add commercial travel suppliers and payment gateways later.
+### 1.3 Success Criteria
 
-## 1.3 Target users
+The MVP is successful when:
 
-| User | Main needs |
+- A customer can register and search available flights.
+- A customer can select a flight and complete the booking workflow.
+- An agency owner can invite a customer and book on their behalf.
+- The same customer cannot accidentally become associated with multiple agencies.
+- The system can calculate and persist the correct customer-facing price.
+- Duplicate booking requests do not create duplicate reservations.
+- Payment failures can be retried and reconciled.
+- Booking confirmation generates a unique internal booking reference and mock PNR.
+- An administrator can complete ticket issuance.
+- Administrators can investigate uncertain supplier outcomes.
+- Users can request cancellation according to their permissions.
+- Mock inventory is visibly distinguished from any future real inventory.
+- The application can be deployed using free-tier services.
+
+---
+
+## 2. Scope and Product Boundaries
+
+### 2.1 Included in MVP
+
+| Area | Included functionality |
 |---|---|
-| Travelers | Search, compare, and book flights and hotels |
-| Travel agents | Find travel options and manage customer bookings |
-| Administrators | Manage suppliers, bookings, users, and pricing |
-| Platform operators | Monitor integrations, failures, and transactions |
+| Authentication | Registration, login, logout, session management |
+| Customer | Customer profile and traveler information |
+| Agency | Agency owner account and customer invitations |
+| Agency association | One agency relationship per customer |
+| Flight search | One-way and round-trip |
+| Flight inventory | Deterministic mock flight supplier |
+| Flight results | Search results, itinerary, fare and baggage information |
+| Pricing | Base fare, markup and final customer price |
+| Booking | Passenger details and booking creation |
+| Payment | Simulated payment processing |
+| Reconciliation | Retry and reconciliation of uncertain payment/booking outcomes |
+| Reservation | Internal reservation and mock PNR |
+| Ticketing | Supplier-style simulated fulfillment with admin exception handling |
+| Cancellation | Customer/authorized agency agent cancellation requests |
+| Administration | Booking, user, agency and ticketing operations |
+| Audit | Booking and administrative action history |
 
----
+### 2.2 Explicitly Excluded
 
-# 2. MVP Scope
+The following features must not be developed in the initial MVP:
 
-## Included in the MVP
-
-- User registration and authentication.
-- User profile and passenger information.
-- Flight search.
-- Flight results and filters.
-- Flight details and fare rules.
-- Fare price verification.
-- Booking workflow.
-- Reservation and booking management.
-- Sandbox supplier integration.
-- Supplier abstraction layer.
-- Multi-currency display.
-- Configurable markup and pricing.
-- AI travel assistant.
-- Admin dashboard.
-- Booking notifications.
-- Basic reporting and analytics.
-- API documentation.
-- Deployment and monitoring.
-
-## Not included in the first release
-
-- Production airline ticket issuance without an authorized supplier.
-- Real-money payment processing.
-- Automated ticket reissuance and refunds across multiple airlines.
-- Full hotel booking and supplier connectivity.
-- Corporate expense management.
-- Loyalty and rewards programs.
-- Complex travel agency commissions.
+- Real airline ticket purchases.
+- Live Amadeus, Sabre or Travelport bookings.
+- Live airline inventory.
+- Live hotel inventory or accommodation bookings.
+- Real payment capture.
+- Real refunds or financial settlement.
+- Agency wallets and credit limits.
+- Commission settlement and agent payouts.
+- Multi-supplier live search aggregation.
+- Automated airline reissues or itinerary changes.
 - Mobile applications.
-- Multiple independently deployed microservices.
+- White-label agency websites.
+- Loyalty and reward programs.
+- Travel insurance.
+- Visa processing.
+- Tours, activities and car rentals.
+- AI chatbot or autonomous AI booking.
+- Advanced analytics and business intelligence.
 
-These should be designed for future expansion without delaying the MVP.
+These features may be evaluated after the MVP has been demonstrated and the business requirements are confirmed.
 
 ---
 
-# 3. Functional Requirements
+## 3. User Roles and Permissions
 
-## 3.1 Authentication and user management
+The MVP contains three application roles.
 
-**Features:**
+### 3.1 Customer
 
-- Email and password registration.
-- Email verification.
-- Login and logout.
-- Password reset.
-- Google OAuth (optional).
-- User profile management.
-- Role-based access control.
-- Account status management.
+A customer can:
 
-**User roles:**
+- Register and log in.
+- Manage their profile.
+- Search flights.
+- View flight details and prices.
+- Select flights.
+- Enter passenger details.
+- Complete simulated checkout.
+- View their bookings.
+- View booking details and PNR.
+- Request cancellation.
+- View booking status and relevant notifications.
+- Accept or reject an agency invitation.
 
-- CUSTOMER
-- AGENT
-- ADMIN
-- SUPER_ADMIN
+A customer can be associated with no more than one agency at a time.
 
-**Acceptance criteria:**
+### 3.2 Agency Owner
 
-- Users can register and authenticate.
-- Protected pages require authentication.
-- Admin routes cannot be accessed by customers.
-- Backend endpoints enforce permissions independently of frontend visibility.
+An agency owner can:
 
-**Technology:** Supabase Auth.
+- Register an agency account.
+- Manage basic agency information.
+- Invite existing or prospective customers.
+- View associated customers.
+- Book flights on behalf of associated customers.
+- View bookings created through their agency.
+- View booking status.
+- Request cancellation for bookings they are authorized to manage.
 
-## 3.2 Customer dashboard
+The agency owner can make bookings on behalf of associated customers.
 
-The customer dashboard should provide:
+An agency owner cannot access unrelated customers or another agency's records.
 
-- Upcoming trips.
-- Previous trips.
-- Pending reservations.
-- Cancelled bookings.
-- Passenger profiles.
-- Saved destinations.
-- Recent searches.
-- Account settings.
+### 3.3 Administrator
 
-A customer should be able to open a booking and view its complete lifecycle.
+An administrator can:
 
-## 3.3 Flight search and discovery
+- View platform users.
+- View agencies.
+- View customer-agency associations.
+- View all bookings.
+- Inspect booking lifecycle events.
+- Inspect payment attempts.
+- Retry or reconcile eligible failed transactions.
+- Inspect uncertain reservation outcomes.
+- Complete administrative ticket issuance.
+- Review cancellation requests.
+- Update operational booking statuses through authorized actions.
+- View audit logs.
 
-This is the primary MVP functionality.
+Administrator access must be protected by server-side role checks.
 
-**Search options:**
+### 3.4 Permission Matrix
 
-- One-way flights.
-- Round-trip flights.
-- Origin airport.
-- Destination airport.
-- Departure date.
-- Return date.
-- Number of adults.
-- Number of children.
-- Number of infants.
-- Cabin class.
-- Currency.
+| Functionality | Customer | Agency owner | Admin |
+|---|---:|---:|---:|
+| Search flights | Yes | Yes | Yes |
+| Book for self | Yes | Yes | Yes |
+| Book for associated customer | No | Yes | Yes |
+| View own bookings | Yes | Yes | Yes |
+| View agency bookings | No | Yes | Yes |
+| View all bookings | No | No | Yes |
+| Invite customers | No | Yes | No |
+| Accept agency invitation | Yes | No | No |
+| Request cancellation | Yes | Yes, authorized bookings | Yes |
+| Issue tickets | No | No | Yes |
+| Reconcile payment | No | No | Yes |
+| Manage users | No | Limited agency customers | Yes |
 
-**Search results should display:**
+All permissions must be enforced by the backend, not merely hidden in the frontend.
 
-- Airline name and logo.
+---
+
+## 4. Customer and Agency Relationship
+
+### 4.1 Relationship Rules
+
+1. A customer may have one active agency association.
+2. An agency can have multiple associated customers.
+3. Association requires an invitation and customer acceptance.
+4. A customer must explicitly consent before transitioning from an independent B2C customer to an agency-associated customer.
+5. An agency owner may create bookings for an associated customer.
+6. An agency must not gain access to bookings belonging to customers outside its association.
+7. Agency association must not automatically transfer ownership of a customer's existing bookings.
+8. A customer's own bookings and agency-created bookings must remain distinguishable.
+
+### 4.2 Invitation Workflow
+
+1. Agency owner enters a customer's email address.
+2. Platform creates an invitation with a unique secure token.
+3. Platform stores the invitation against the agency and intended customer.
+4. Customer receives or accesses the invitation.
+5. Customer authenticates or registers.
+6. Customer reviews the agency association.
+7. Customer accepts or rejects the invitation.
+8. Upon acceptance, the platform establishes the association.
+9. The invitation becomes consumed and cannot be reused.
+
+An invitation must expire after a configurable period. The initial default can be seven days.
+
+### 4.3 Existing B2C Customer Transition
+
+When an existing independent customer receives an agency invitation:
+
+- The customer remains independent until accepting.
+- Acceptance requires explicit consent.
+- The existing customer account is reused.
+- No duplicate customer account is created.
+- Existing bookings remain under their original ownership.
+- A customer cannot accept an invitation if already associated with another agency.
+
+The customer must leave or terminate an existing association through an authorized workflow before joining another agency. If this workflow is not included in the MVP, the application must prevent the second association and direct the user to contact an administrator.
+
+---
+
+## 5. Flight Search and Inventory
+
+### 5.1 Search Types
+
+The MVP supports:
+
+**One-way search**
+- Origin
+- Destination
+- Departure date
+- Passenger count
+- Cabin class
+
+**Round-trip search**
+- Origin
+- Destination
+- Departure date
+- Return date
+- Passenger count
+- Cabin class
+
+Multi-city search is excluded.
+
+### 5.2 Search Validation
+
+- Origin and destination must be different.
+- Departure date must not be in the past.
+- Return date must be later than departure date.
+- Passenger count must be within the configured limit.
+- Required fields must be validated on both frontend and backend.
+- Unsupported routes must return a meaningful empty-results response.
+
+### 5.3 Mock Flight Inventory
+
+The MVP uses a deterministic mock supplier.
+
+It should contain realistic sample data covering:
+
+- Multiple airlines.
+- Multiple routes.
+- Different departure times.
+- Different arrival times.
+- Direct and connecting flights.
+- Different cabin classes.
+- Different fare prices.
+- Baggage allowance.
+- Flight duration.
+- Aircraft information where available in fixtures.
+
+Mock inventory must be predictable and reproducible.
+
+Repeated searches with the same search parameters should return consistent results unless an explicitly configured fixture variation is used.
+
+### 5.4 Flight Result Display
+
+Each result should show:
+
+- Airline name and logo or text identifier.
 - Flight number.
-- Departure and arrival airports.
+- Origin and destination.
 - Departure and arrival times.
+- Departure and arrival airports.
 - Flight duration.
 - Stop count.
-- Layover details.
-- Baggage allowance, when available.
-- Fare family.
-- Refundability.
-- Change conditions.
-- Total price.
-- Currency.
-- Supplier reference.
-
-**Filters:**
-
-- Price range.
-- Airlines.
-- Departure time.
-- Arrival time.
-- Non-stop flights.
-- One-stop flights.
-- Total duration.
+- Layover information where applicable.
 - Cabin class.
+- Baggage allowance.
+- Base fare.
+- Customer-facing fare.
+- Inventory source.
 
-**Sorting:**
+### 5.5 Inventory Separation
 
-- Cheapest.
-- Fastest.
-- Recommended.
-- Earliest departure.
+The platform must distinguish mock inventory from real supplier inventory.
 
-**Acceptance criteria:**
+For the MVP:
 
-- Search results come from a real sandbox API when configured.
-- The interface supports loading, empty, and error states.
-- Search results are normalized into a consistent internal format.
-- Search requests are validated on the backend.
-- Search results are never presented as confirmed bookings.
+- Only mock inventory is enabled.
+- Every mock result must display a clear demo/mock indicator.
+- Mock and real inventory must never be silently merged.
+- Future real inventory must be presented as a separate source or explicitly identified section.
+- A booking must retain its inventory source permanently.
 
-## 3.4 Supplier integration engine
+No production availability claims may be made using mock data.
 
-This is the most important architectural component.
+---
 
-Build a supplier abstraction layer so the core application never depends directly on one travel provider's API format.
+## 6. Supplier Integration Architecture
 
-**Initial integration:**
+### 6.1 Supplier Abstraction
 
-Use Amadeus Self-Service test APIs, subject to account eligibility and available test functionality.
+The application must not couple its business logic directly to a particular supplier.
 
-**Future integration candidates:**
+Create a supplier adapter interface responsible for:
 
-- Amadeus.
-- Duffel.
-- Sabre.
-- Travelport.
-- PKFARE.
-- Mystifly.
-- Hotelbeds.
-- Expedia Rapid.
+- Flight search.
+- Flight details.
+- Fare validation.
+- Reservation creation.
+- Reservation status lookup.
+- Ticket issuance where supported.
+- Cancellation where supported.
 
-**Supplier adapter responsibilities:**
+The initial implementation provides a mock adapter.
 
-- Authentication.
-- Token management.
-- Request transformation.
-- Response transformation.
-- Error normalization.
-- Timeout handling.
-- Retry handling where safe.
-- Rate-limit handling.
-- Supplier health status.
-- Logging and tracing.
+### 6.2 Mock Supplier
 
-**Suggested interface:**
+The mock supplier must simulate:
 
-```ts
-interface FlightSupplier {
-  searchFlights(
-    request: FlightSearchRequest
-  ): Promise<FlightOffer[]>;
-
-  getOfferPrice(
-    offerId: string
-  ): Promise<PricedOffer>;
+- Successful search.
+- Empty search results.
+- Price changes.
+- Availability changes.
+- Successful reservation.
+- Reservation failure.
+- Reservation timeout with uncertain outcome.
+- Successful ticket issuance.
+- Ticket issuance failure.
+- Successful cancellation response.
 
-  createBooking(
-    request: CreateBookingRequest
-  ): Promise<SupplierBooking>;
-
-  getBooking(
-    supplierBookingId: string
-  ): Promise<SupplierBooking>;
-
-  cancelBooking?(
-    supplierBookingId: string
-  ): Promise<CancelResult>;
-}
-```
-
-Not every provider supports every operation. Unsupported operations must be explicitly represented rather than silently simulated.
-
-**Important:** Store supplier-specific references alongside internal IDs. Never use a supplier's booking ID as the platform's primary booking identifier.
-
-## 3.5 Flight pricing and fare verification
-
-Before a customer proceeds with booking, the platform must verify the latest available fare.
+Failure scenarios must be configurable in development or test environments.
 
-**Requirements:**
+### 6.3 Future Integration Boundary
 
-- Revalidate the selected offer with the supplier.
-- Compare the previous and updated prices.
-- Display price changes.
-- Display taxes and fees when supplied.
-- Apply configured markup.
-- Calculate final customer price.
-- Record supplier currency and customer display currency.
-- Reject expired offers.
-
-**Example pricing calculation:**
-
-```text
-Supplier base price       $300
-Supplier taxes             $45
-Platform markup            $15
-------------------------------
-Customer total            $360
-```
-
-The example is illustrative, not a live fare.
-
-**Acceptance criteria:**
-
-- A customer cannot book an expired offer.
-- Price changes require customer confirmation.
-- Pricing calculations happen on the backend.
-- The original supplier price is retained for auditing.
-
-## 3.6 Booking and reservation management
-
-**Booking journey:**
-
-1. Customer searches flights.
-2. Customer selects an offer.
-3. Backend retrieves current pricing.
-4. Customer confirms passenger information.
-5. Backend creates an internal booking.
-6. Backend initiates the supplier booking operation.
-7. Supplier response is saved.
-8. Booking status is updated.
-9. Customer receives confirmation or an appropriate failure message.
+The architecture should permit future Amadeus or other supplier adapters.
 
-**Passenger information:**
-
-- First name.
-- Last name.
-- Date of birth, where required.
-- Gender, where required by supplier.
-- Nationality, where required.
-- Passport information, where required.
-- Contact email.
-- Contact phone.
-
-Collect sensitive passenger information only when needed for the booking and protect it appropriately.
+However:
 
-**Booking statuses:**
+- No production GDS connection is required.
+- No live supplier credentials are required.
+- No live ticket issuance is implemented.
+- No supplier-specific functionality should be falsely presented as operational.
 
-- DRAFT
-- PRICE_PENDING
-- PRICE_CONFIRMED
-- BOOKING_PENDING
-- CONFIRMED
-- TICKETING_PENDING
-- TICKETED
-- FAILED
-- CANCEL_PENDING
-- CANCELLED
-- REFUND_PENDING
-- REFUNDED
+### 6.4 Supplier Inventory Identification
 
-A reservation, a confirmed booking, and an issued ticket are different states. Do not mark a booking as ticketed unless the supplier explicitly confirms ticket issuance.
+Every inventory item must retain:
 
-**Booking details should contain:**
+- Supplier identifier.
+- Supplier inventory reference.
+- Inventory source type.
+- Supplier fare reference where available.
+- Search timestamp.
+- Price currency.
+- Price snapshot.
+- Availability validation timestamp.
 
-- Internal booking reference.
-- Supplier booking reference.
-- Passenger details.
-- Flight itinerary.
-- Price breakdown.
-- Currency.
-- Booking status.
-- Supplier response summary.
-- Created and updated timestamps.
-
-**Reliability requirements:**
+---
 
-- Prevent duplicate booking submissions.
-- Use idempotency keys.
-- Persist the booking attempt before making external calls.
-- Handle supplier timeouts and uncertain outcomes.
-- Provide a way for administrators to reconcile uncertain booking states.
+## 7. Pricing and Markup
 
-## 3.7 Hotel search — foundation only
+### 7.1 Pricing Rule
 
-Design the domain and supplier interfaces for future hotel booking.
+The platform uses the supplier's base fare as the markup calculation base.
 
-Potential future functionality:
+Formula:
 
-- Destination search.
-- Check-in and check-out.
-- Number of rooms.
-- Adults and children.
-- Room availability.
-- Hotel images and descriptions.
-- Amenities.
-- Room types.
-- Cancellation policies.
-- Hotel pricing.
-- Reservation management.
+`Customer Price = Base Fare + Markup + Applicable Platform Fee`
 
-For MVP, the hotel section can be marked as coming soon unless an accessible sandbox hotel API is available.
+The MVP only needs base fare and configured markup.
 
-Do not show fake hotel availability as real inventory.
+No tax engine or complex market-specific fee engine is required.
 
-## 3.8 Multi-currency support
+### 7.2 Markup Configuration
 
-Support:
+For the initial MVP:
 
-- USD.
-- EUR.
-- GBP.
-- BDT.
-- Other currencies through a configurable currency table.
+- A platform administrator can configure the default markup.
+- Markup is applied to the supplier base fare.
+- Markup is stored separately from the base fare.
+- The customer sees the final price.
+- The booking stores an immutable price snapshot.
 
-**Requirements:**
+### 7.3 Price Snapshot
 
-- Store the supplier's original amount and currency.
-- Store the customer-facing amount and currency.
-- Store the exchange rate used.
-- Store the exchange rate timestamp and source.
-- Use decimal arithmetic, not JavaScript floating-point calculations, for money.
-- Allow administrators to configure supported currencies.
+Every booking must retain:
 
-Currency conversion should initially use a free exchange-rate source if its terms and limits permit. Alternatively, allow administrators to configure exchange rates manually.
+- Supplier base fare.
+- Supplier currency.
+- Markup amount.
+- Markup calculation rule.
+- Customer-facing amount.
+- Customer currency.
+- Conversion rate if conversion is implemented.
+- Price calculation timestamp.
 
-Displaying a converted price does not mean the platform can settle or charge that currency.
-
-## 3.9 Pricing and markup management
-
-Admin users should be able to configure:
-
-- Default markup.
-- Percentage markup.
-- Fixed markup.
-- Supplier-specific markup.
-- Route-specific markup.
-- Currency-specific rules.
-- Minimum selling price.
-- Promotional discount.
-
-Pricing rule priority should be deterministic and documented.
-
-All price calculations should be performed server-side and saved as a snapshot with the booking.
-
-## 3.10 Payment architecture
-
-The MVP should be payment-ready, but real payments should be disabled initially.
-
-**Architecture requirements:**
-
-- Payment provider abstraction.
-- Payment intent model.
-- Payment status tracking.
-- Payment transaction records.
-- Refund status model.
-- Webhook endpoint structure.
-- Reconciliation support.
+The system must not recalculate old booking prices using newly configured markup values.
 
-**Payment statuses:**
+### 7.4 Currency Scope
 
-- CREATED
-- PENDING
-- AUTHORIZED
-- CAPTURED
-- FAILED
-- REFUND_PENDING
-- REFUNDED
+To keep the MVP within the $0 budget:
 
-**Future payment integrations:**
+- One configured platform currency is used initially.
+- All demo flight prices use that currency.
+- No live FX integration is required.
+- Currency conversion and multiple market pricing are future capabilities.
 
-- Stripe.
-- Adyen.
-- Checkout.com.
-- Local payment providers where commercially available.
+---
 
-Never store card numbers or CVV in the application database.
+## 8. Booking and Reservation Management
 
-For the initial sandbox, provide a clearly labelled simulated payment flow. It must not imply that money was charged.
+### 8.1 Booking Workflow
 
-## 3.11 AI travel assistant
+1. Customer or authorized agency owner searches flights.
+2. User selects a flight.
+3. User reviews the selected itinerary and fare.
+4. User enters passenger information.
+5. Backend validates the selected inventory.
+6. Backend creates a booking in an initial pending state.
+7. Backend calculates and snapshots the price.
+8. Simulated payment processing begins.
+9. The supplier adapter receives a reservation request.
+10. The reservation result is processed.
+11. A successful reservation generates an internal booking reference and mock PNR.
+12. Booking moves to `CONFIRMED`.
+13. Ticket fulfillment is initiated.
+14. Administrative fulfillment or simulated supplier fulfillment moves the booking to `TICKETED`.
 
-The AI assistant should help customers discover and understand travel options.
+The implementation must ensure that payment and reservation operations cannot create duplicate bookings through repeated requests.
 
-**MVP capabilities:**
+### 8.2 Booking Reference
 
-- Natural-language travel requests.
-- Convert requests into structured flight searches.
-- Ask for missing information.
-- Explain flight options.
-- Compare available offers.
-- Summarize fare conditions.
-- Explain baggage and cancellation policies when supplier data exists.
-- Suggest suitable alternatives.
-- Answer general travel questions.
+Every booking must have:
 
-**Example:**
+- Unique internal booking ID.
+- Human-readable booking reference.
+- Passenger information.
+- Customer owner.
+- Booking creator.
+- Agency ID when applicable.
+- Inventory source.
+- Supplier reference.
+- PNR when reservation is successful.
+- Booking price snapshot.
+- Current status.
+- Creation and update timestamps.
 
-Customer:
+### 8.3 Booking Ownership
 
-"I need to fly from Dhaka to London next month, preferably with one stop and a reasonable price."
+Each booking must distinguish:
 
-Assistant:
+- The customer for whom the travel is booked.
+- The authenticated user who initiated the booking.
+- The associated agency, when applicable.
 
-- Extracts origin and destination.
-- Asks for missing dates and passenger count.
-- Calls the flight search tool.
-- Receives actual supplier results.
-- Compares available offers.
-- Explains the best options.
+For an agency-created booking:
 
-**AI tool architecture:**
+- Customer remains the travel beneficiary and booking owner.
+- Agency owner is recorded as the booking creator.
+- Agency association is captured at booking time.
+- The booking must remain linked to the original agency for audit purposes.
 
-```text
-Customer
-   |
-AI Assistant
-   |
-Intent Extraction
-   |
-Tool Selection
-   |
-Backend Tools
-   |-- searchFlights()
-   |-- getOfferPrice()
-   |-- compareOffers()
-   |-- getBookingStatus()
-   |
-Normalized Results
-   |
-AI Response
-```
+### 8.4 Idempotency
 
-**Important AI safety rules:**
+Every booking creation and payment operation must support idempotency.
 
-- AI cannot invent flights, prices, or availability.
-- AI cannot directly write booking records.
-- AI cannot confirm a reservation without the booking service confirming it.
-- AI cannot charge a payment method.
-- Booking operations require explicit customer confirmation.
-- Tool calls must validate user permissions and input.
-- AI responses must distinguish live supplier data from general recommendations.
+Requirements:
 
-Use a model-provider abstraction so the platform can switch between Gemini, OpenAI, or other compatible providers.
+- Repeated requests using the same idempotency key must not create another booking.
+- A repeated payment request must not create a duplicate payment attempt or charge.
+- A retry must reference the existing operation.
+- Booking and payment operations must be independently auditable.
 
-The AI feature should be optional and gracefully degrade when no API key or free quota is available.
+---
 
-## 3.12 Admin dashboard
+## 9. Payment Processing
 
-The admin dashboard should provide centralized operational control.
+### 9.1 MVP Payment Scope
 
-**Overview:**
+The MVP uses simulated payment processing only.
+
+There will be no real money movement.
+
+The interface should demonstrate:
+
+- Payment initiation.
+- Successful payment.
+- Failed payment.
+- Pending payment.
+- Payment retry.
+- Reconciliation.
+
+### 9.2 Payment States
+
+- `PENDING`
+- `PROCESSING`
+- `SUCCEEDED`
+- `FAILED`
+- `UNKNOWN`
+- `RECONCILED`
+
+### 9.3 Payment Capture Failure
+
+The selected recovery strategy is retry and reconciliation.
+
+When payment capture fails or the result is uncertain:
+
+1. Do not assume the transaction failed permanently.
+2. Inspect the existing payment operation.
+3. Check whether the payment was successfully processed.
+4. Reconcile the transaction.
+5. Retry only when it is safe to do so.
+6. Avoid duplicate charges or duplicate bookings.
+7. Keep unresolved operations in a visible pending/unknown state.
+8. Allow administrative investigation.
+
+### 9.4 Financial Integrity
+
+- Payment attempts must be stored independently.
+- Payment references must be unique.
+- Booking totals must match their immutable price snapshots.
+- Payment operations must be idempotent.
+- All reconciliation actions must be recorded.
+
+---
+
+## 10. Ticket Fulfillment
+
+### 10.1 Fulfillment Strategy
+
+The intended behavior is automated supplier ticketing where supported, with administrative intervention when necessary.
+
+Since the MVP uses a mock supplier, it must simulate this behavior.
+
+### 10.2 Ticket Issuance Workflow
+
+1. Reservation is confirmed.
+2. Ticket fulfillment begins through the supplier adapter.
+3. If the adapter reports successful issuance, the booking becomes `TICKETED`.
+4. If the adapter reports an exception or unsupported operation, the booking enters an administrative fulfillment queue.
+5. An administrator reviews the booking.
+6. The administrator performs simulated ticket issuance.
+7. The system generates a mock 13-digit ticket number.
+8. Ticket issuance is recorded in the booking history.
+9. The booking becomes `TICKETED`.
+
+### 10.3 Ticket Record
+
+Store:
+
+- Ticket ID.
+- Booking ID.
+- Passenger ID.
+- Ticket number.
+- Issuance method.
+- Issuance timestamp.
+- Issued by.
+- Fulfillment source.
+
+All mock ticket numbers must be clearly identified as demo data and must never be represented as valid airline tickets.
+
+---
+
+## 11. Cancellation Management
+
+### 11.1 MVP Scope
+
+The MVP supports cancellation requests, not actual airline cancellation or financial refunds.
+
+### 11.2 Cancellation Permissions
+
+- A customer may request cancellation of their own booking.
+- An agency owner may request cancellation for an authorized booking associated with their agency.
+- An administrator may review and manage cancellation requests.
+
+### 11.3 Cancellation Workflow
+
+1. Authorized user opens the booking.
+2. User submits a cancellation request.
+3. User provides a cancellation reason.
+4. Booking enters `CANCELLATION_PENDING`.
+5. Request is recorded in the audit history.
+6. Administrator reviews the request.
+7. Administrator records the simulated cancellation outcome.
+8. If approved, booking becomes `CANCELLED`.
+9. If rejected, the booking returns to its previous eligible state and the decision is recorded.
+
+No automatic refund or airline cancellation is performed.
+
+---
+
+## 12. Administration Panel
+
+### 12.1 Dashboard
+
+Display:
 
 - Total users.
-- Total searches.
+- Total agencies.
 - Total bookings.
 - Confirmed bookings.
-- Failed bookings.
+- Ticketed bookings.
 - Pending bookings.
-- Booking revenue estimates.
-- Supplier health.
+- Failed payment attempts.
+- Pending cancellation requests.
+- Bookings requiring operational intervention.
 
-**User management:**
+All metrics must be derived from actual application records.
 
-- List users.
-- View profiles.
-- Change user roles.
-- Suspend accounts.
+### 12.2 Booking Management
 
-**Booking management:**
+Administrators can:
 
-- Search bookings.
-- Filter by status.
-- View booking details.
-- View supplier references.
-- View price breakdown.
-- Inspect booking errors.
-- Add internal notes.
-- Trigger safe reconciliation actions.
+- Search bookings by reference.
+- Filter bookings by status.
+- Inspect booking details.
+- View passenger information.
+- View pricing breakdown.
+- View reservation information.
+- View payment history.
+- View ticket information.
+- Inspect booking event history.
+- Perform authorized operational actions.
 
-**Supplier management:**
+### 12.3 Ticketing Operations
 
-- Add supplier configuration.
-- Enable or disable suppliers.
-- Configure sandbox or production environment.
-- Check supplier connectivity.
-- View supplier error logs.
+Provide an operational queue containing bookings that require administrative fulfillment.
 
-Never expose supplier API secrets in the frontend or ordinary admin API responses.
+The administrator can:
 
-**Pricing management:**
+- Inspect the reservation.
+- Review passenger information.
+- Issue a mock ticket.
+- Record the issuance result.
+- View the audit trail.
 
-- Configure markups.
-- Configure currency rules.
-- View pricing history.
+### 12.4 Payment Operations
 
-**System monitoring:**
+Provide a payment operations view showing:
 
-- Recent errors.
-- Failed API requests.
-- Supplier response times.
-- Booking failures.
-- AI tool failures.
+- Payment reference.
+- Booking reference.
+- Payment amount.
+- Payment status.
+- Attempt count.
+- Failure reason.
+- Reconciliation status.
 
-## 3.13 Notifications
+### 12.5 Agency Management
 
-Initial notifications:
+Administrators can:
 
-- Account registration.
-- Booking request received.
+- View agencies.
+- View agency owners.
+- View associated customers.
+- View agency bookings.
+- Inspect invitation status.
+
+---
+
+## 13. Notifications
+
+The MVP should use in-app notifications and booking status messages.
+
+Events include:
+
+- Agency invitation created.
+- Agency invitation accepted.
+- Booking created.
+- Payment succeeded.
+- Payment failed.
 - Booking confirmed.
-- Booking failed.
-- Booking status changed.
+- Ticket issued.
+- Cancellation requested.
+- Cancellation approved or rejected.
 
-Use email templates and a provider abstraction.
+External SMS and paid notification providers are excluded.
 
-For the first deployment, in-app notifications can work without any email provider. Email should be optional.
-
-## 3.14 Search history and saved trips
-
-Customers should be able to:
-
-- View recent searches.
-- Save flight offers.
-- Remove saved offers.
-- View previous booking attempts.
-
-Saved offers should be labelled with their expiry or freshness status. They must not be represented as guaranteed availability.
+Email notifications can be added only if an available free service is configured without creating an initial expense. They are not a release blocker.
 
 ---
 
-# 4. User Experience and Main Screens
+## 14. Data Model
 
-## Customer application
+The following are the initial logical entities.
 
-1. Landing page.
-2. Flight search page.
-3. Search results page.
-4. Flight details page.
-5. Passenger information page.
-6. Price confirmation page.
-7. Payment/sandbox checkout page.
-8. Booking confirmation page.
-9. My bookings page.
-10. Booking details page.
-11. AI travel assistant page.
-12. Profile and settings page.
-13. Login and registration pages.
+### 14.1 Identity and Organization
 
-## Admin application
+**users**
+- id
+- email
+- password/auth provider reference
+- role
+- account status
+- created_at
+- updated_at
 
-1. Admin overview.
-2. User management.
-3. Booking management.
-4. Booking details and reconciliation.
-5. Supplier management.
-6. Pricing configuration.
-7. Currency management.
-8. System logs.
-9. AI configuration.
-10. Admin settings.
+**customer_profiles**
+- id
+- user_id
+- first_name
+- last_name
+- phone
+- created_at
+- updated_at
 
-**Design direction:**
+**agencies**
+- id
+- name
+- owner_user_id
+- status
+- created_at
+- updated_at
 
-- Modern, clean travel-tech interface.
-- Responsive desktop and mobile layouts.
-- Clear flight cards.
-- Simple booking progression.
-- Accessible forms.
-- Loading skeletons.
-- Meaningful error states.
-- No unnecessary animations.
-- Consistent design system.
+**agency_memberships**
+- id
+- agency_id
+- customer_user_id
+- status
+- accepted_at
+- created_at
 
-Suggested UI inspiration: Duffel's developer-first simplicity, Spotnana's travel workflow clarity, and modern OTA search experiences.
+**agency_invitations**
+- id
+- agency_id
+- email
+- invitation_token_hash
+- status
+- expires_at
+- accepted_at
+- created_at
+
+### 14.2 Travel and Inventory
+
+**airports**
+- id
+- iata_code
+- name
+- city
+- country
+
+**airlines**
+- id
+- code
+- name
+
+**flight_offers**
+- id
+- supplier_id
+- supplier_offer_reference
+- origin_airport_id
+- destination_airport_id
+- departure_at
+- arrival_at
+- base_fare
+- currency
+- cabin_class
+- inventory_source
+- expires_at
+- created_at
+
+**flight_segments**
+- id
+- flight_offer_id
+- airline_id
+- flight_number
+- origin_airport_id
+- destination_airport_id
+- departure_at
+- arrival_at
+- baggage_allowance
+
+**suppliers**
+- id
+- name
+- supplier_type
+- enabled
+- configuration
+
+### 14.3 Booking
+
+**bookings**
+- id
+- booking_reference
+- customer_user_id
+- created_by_user_id
+- agency_id
+- supplier_id
+- inventory_source
+- supplier_booking_reference
+- pnr
+- booking_status
+- currency
+- base_fare
+- markup_amount
+- total_amount
+- idempotency_key
+- created_at
+- updated_at
+
+**booking_passengers**
+- id
+- booking_id
+- passenger_type
+- first_name
+- last_name
+- date_of_birth
+- passport_details_reference where applicable
+
+**booking_events**
+- id
+- booking_id
+- event_type
+- previous_status
+- new_status
+- actor_user_id
+- metadata
+- created_at
+
+### 14.4 Payments and Fulfillment
+
+**payments**
+- id
+- booking_id
+- payment_reference
+- amount
+- currency
+- payment_status
+- provider_type
+- created_at
+- updated_at
+
+**payment_attempts**
+- id
+- payment_id
+- attempt_number
+- idempotency_key
+- result
+- failure_reason
+- reconciliation_status
+- created_at
+
+**tickets**
+- id
+- booking_id
+- passenger_id
+- ticket_number
+- issuance_method
+- issuance_status
+- issued_by
+- issued_at
+
+**cancellation_requests**
+- id
+- booking_id
+- requested_by
+- reason
+- status
+- reviewed_by
+- reviewed_at
+- created_at
+
+**audit_logs**
+- id
+- actor_user_id
+- action
+- entity_type
+- entity_id
+- metadata
+- created_at
+
+### 14.5 Data Integrity
+
+- Use foreign keys.
+- Use unique constraints for booking references, invitation tokens, and payment references.
+- Enforce one active agency association per customer at the database level.
+- Store monetary amounts using decimal/numeric types, not floating-point values.
+- Use UTC timestamps.
+- Store sensitive passenger information with appropriate access restrictions.
+- Never store raw payment card information.
+
+The final database schema should be adjusted during implementation, but the domain boundaries must be maintained.
 
 ---
 
-# 5. Technical Architecture
+## 15. Technical Architecture
 
-## 5.1 Architecture decision
+### 15.1 Architecture Style
 
-Use a **modular monolith** for the MVP.
+Use a modular monolith structured as an npm workspaces monorepo:
+- `apps/web`: Frontend SPA (React + Vite + Tailwind CSS)
+- `apps/api`: Backend REST API (Hono on Cloudflare Workers)
+- `packages/shared`: Shared TypeScript types, Zod schemas, constants, and mock supplier fixtures
+- `packages/db`: Supabase PostgreSQL schema, migrations, Drizzle ORM client, and seed scripts
 
-Do not begin with microservices.
+The MVP does not require microservices.
 
-Reasons:
+Recommended backend domain modules:
 
-- Lower infrastructure cost.
-- Faster development.
-- Easier debugging.
-- Simpler deployment.
-- Fewer operational dependencies.
-- Easier transactions across booking-related modules.
+- Authentication & Identity
+- Users & Customer Profiles
+- Agencies & Invitations
+- Flight Search
+- Inventory & Deterministic Mock Supplier
+- Pricing Engine & Snapshots
+- Bookings & Reservations
+- Simulated Payments & Reconciliation
+- Ticketing & Operations Queue
+- Cancellations & Review
+- Administration & Metrics Dashboard
+- In-App Notifications
+- Audit Logging
 
-Modules should have clear boundaries so they can be extracted later if needed.
+Modules should communicate through clear service interfaces.
 
-## 5.2 High-level architecture
+### 15.2 Recommended Technology Stack
 
-```text
-                 CUSTOMER / ADMIN
-                        |
-                        v
-                 Next.js Frontend
-                        |
-                        v
-              Vercel Serverless API
-                        |
-       +----------------+----------------+
-       |                |                |
-       v                v                v
-    Auth/User        Travel Core       AI Assistant
-       |                |                |
-       |          +-----+------+         |
-       |          |            |         |
-       |          v            v         |
-       |       Search       Booking      |
-       |          |            |         |
-       |          v            v         |
-       |      Supplier     Pricing       |
-       |      Adapters       Engine      |
-       |          |            |         |
-       +----------+------------+---------+
-                        |
-                        v
-                 Supabase PostgreSQL
-                        |
-                        v
-               External Travel APIs
-                        |
-              +---------+----------+
-              |                    |
-              v                    v
-          Amadeus API         Future Suppliers
-```
+| Layer | Technology |
+|---|---|
+| Monorepo / Workspaces | npm workspaces |
+| Frontend | React + Vite |
+| Language | TypeScript |
+| UI | Tailwind CSS |
+| Backend | Cloudflare Workers |
+| API framework | Hono |
+| Database | Supabase PostgreSQL (Free Tier) |
+| Authentication | Supabase Auth |
+| Database access / ORM | Drizzle ORM + Supabase client / connection pooler |
+| Validation | Zod (shared across frontend & backend) |
+| API documentation | OpenAPI |
+| Testing | Vitest |
+| Frontend deployment | Cloudflare Pages |
+| Backend deployment | Cloudflare Workers |
+| Source control | GitHub |
+| AI development assistance | Existing free/local tools and available subscriptions |
 
-## 5.3 Recommended technology stack
+### 15.3 Deployment Architecture
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Frontend | Next.js | Customer and admin UI |
-| Language | TypeScript | Shared type safety |
-| Styling | Tailwind CSS | UI styling |
-| Components | shadcn/ui + Radix UI | Accessible components |
-| Routing | Next.js App Router | Application routing |
-| Server state | TanStack Query | API data and caching |
-| Forms | React Hook Form | Form management |
-| Validation | Zod | Shared schemas |
-| Backend | Node.js-compatible TypeScript with Hono | API |
-| Runtime | Vercel Serverless Functions | Serverless deployment |
-| Database | PostgreSQL | Application data |
-| Database hosting | Supabase Free | Managed database |
-| Authentication | Supabase Auth | Authentication |
-| Database access | Drizzle ORM | Typed queries and migrations |
-| API documentation | OpenAPI + Scalar | API documentation |
-| AI | Provider abstraction + Gemini API | AI assistant |
-| Testing | Vitest | Unit and integration tests |
-| Browser testing | Playwright | End-to-end testing |
-| Logging | Structured application logs | Error investigation |
-| Source control | GitHub | Repository |
-| CI/CD | GitHub Actions | Automated testing |
-| Frontend hosting | Vercel | Web application hosting |
-| Backend hosting | Vercel | Serverless API deployment |
+Frontend:
+- Deploy React application to Cloudflare Pages.
+- Use the free `pages.dev` subdomain initially.
 
-## 5.4 Why this stack?
+Backend:
+- Deploy TypeScript API to Cloudflare Workers.
+- Use the free `workers.dev` subdomain initially.
 
-**Next.js:** Fast development, server-side rendering, App Router, full-stack capabilities, and seamless Vercel integration.
+Database and authentication:
+- Use a Supabase free-tier project.
+- Configure database migrations and environment variables.
 
-**TypeScript:** Shared types, predictable APIs, easier refactoring.
+No paid hosting, domain, database, API, or payment service is required for the initial demo.
 
-**Hono:** Lightweight API framework with TypeScript support and Vercel Serverless / Node.js compatibility.
+Free-tier limits and provider policies must be checked before deployment. $0 is the target, not a guarantee of unlimited production capacity.
 
-**PostgreSQL:** Relational integrity is essential for passengers, bookings, payments, supplier records, and audit history.
+### 15.4 Backend Design Principles
 
-**Supabase:** Database and authentication without managing a server.
+- REST API.
+- Strict input validation.
+- Server-side authorization.
+- Modular service boundaries.
+- Database transactions where appropriate.
+- Idempotent booking and payment operations.
+- Consistent error responses.
+- Structured logging.
+- Audit history for critical operations.
+- Retry-safe asynchronous processing.
 
-**Drizzle ORM:** Type-safe SQL and explicit migrations.
-
-**Vercel:** Frontend and API can be deployed without managing a VPS.
-
-**No Docker required:** Develop and run locally using Node.js and package scripts.
-
-## 5.5 Avoid initially
-
-Do not introduce these unless a concrete requirement justifies them:
-
-- Kubernetes.
-- Docker.
-- Kafka.
-- Redis.
-- Elasticsearch.
-- Separate microservices.
-- Dedicated message brokers.
-- Complex event-driven infrastructure.
-- Paid observability platforms.
-- Paid AI APIs.
-- Paid database hosting.
-
-The architecture should not be unnecessarily complicated for the initial traffic level.
+Do not introduce Kafka, Kubernetes, or a distributed microservice infrastructure for this MVP.
 
 ---
 
-# 6. Database Design
+## 16. API Requirements
 
-Use PostgreSQL.
+Suggested REST endpoints:
 
-Recommended initial tables:
+### Authentication
+- Authentication handled by Supabase Auth.
+- `GET /api/v1/me`
 
-## Identity and users
+### Customer
+- `GET /api/v1/customers/me`
+- `PATCH /api/v1/customers/me`
 
-- profiles
-- user_roles
-- passenger_profiles
+### Agency
+- `POST /api/v1/agencies`
+- `GET /api/v1/agencies/me`
+- `POST /api/v1/agencies/invitations`
+- `GET /api/v1/agencies/invitations`
+- `POST /api/v1/agencies/invitations/:id/accept`
+- `POST /api/v1/agencies/invitations/:id/reject`
+- `GET /api/v1/agencies/customers`
+- `GET /api/v1/agencies/bookings`
 
-## Travel search
+### Flight Search
+- `GET /api/v1/flights/search`
+- `GET /api/v1/flights/:offerId`
 
-- flight_searches
-- flight_offers
-- saved_offers
+### Booking
+- `POST /api/v1/bookings`
+- `GET /api/v1/bookings`
+- `GET /api/v1/bookings/:bookingId`
+- `POST /api/v1/bookings/:bookingId/cancellation-requests`
 
-## Suppliers
+### Payment
+- `POST /api/v1/bookings/:bookingId/payment`
+- `GET /api/v1/bookings/:bookingId/payments`
+- `POST /api/v1/payments/:paymentId/reconcile`
 
-- suppliers
-- supplier_credentials
-- supplier_requests
-- supplier_logs
+### Administration
+- `GET /api/v1/admin/dashboard`
+- `GET /api/v1/admin/bookings`
+- `GET /api/v1/admin/payments`
+- `GET /api/v1/admin/ticketing-queue`
+- `POST /api/v1/admin/bookings/:bookingId/issue-ticket`
+- `GET /api/v1/admin/agencies`
+- `GET /api/v1/admin/users`
+- `GET /api/v1/admin/audit-logs`
 
-## Booking
+All endpoints must enforce authentication, authorization, validation, and appropriate ownership checks.
 
-- bookings
-- booking_passengers
-- booking_segments
-- booking_status_history
-- booking_attempts
+---
 
-## Pricing
+## 17. Security Requirements
 
-- currencies
-- exchange_rates
-- pricing_rules
-- booking_price_snapshots
-
-## Payment
-
-- payment_intents
-- payment_transactions
-- payment_refunds
-
-## AI
-
-- ai_conversations
-- ai_messages
-- ai_tool_calls
-
-## Administration
-
-- audit_logs
-- notifications
-- system_settings
-
-## 6.1 Important database design rules
-
-- Use UUID primary keys.
-- Store timestamps in UTC.
-- Store currency codes using ISO 4217.
-- Store monetary values using PostgreSQL `numeric`.
-- Preserve the original supplier response where operationally necessary, with appropriate redaction.
-- Keep booking status history instead of overwriting all history.
-- Add indexes to frequently queried fields.
-- Apply row-level security where appropriate.
-- Never store raw supplier credentials in public tables.
-- Encrypt sensitive passenger data and restrict access.
+- Use Supabase Auth for identity.
+- Enforce role-based authorization on the backend.
+- Apply database-level Row Level Security where appropriate.
+- Do not expose service-role credentials to the frontend.
+- Validate every external input.
+- Hash invitation tokens before storing them.
+- Restrict access to passenger information.
+- Avoid logging passwords, tokens, or sensitive passenger information.
+- Use secure HTTP-only cookie handling or a correctly configured authentication flow.
+- Protect administrative endpoints.
+- Use idempotency keys for critical operations.
 - Maintain audit logs for privileged actions.
 
 ---
 
-# 7. API Design
+## 18. Testing Requirements
 
-Use REST APIs with versioning.
+### Authentication
+- Customer registration.
+- Login and logout.
+- Unauthorized access.
+- Role-based access restrictions.
 
-Base URL:
+### Agency
+- Create agency.
+- Invite customer.
+- Accept invitation.
+- Reject invitation.
+- Prevent duplicate associations.
+- Prevent unauthorized customer access.
+- Prevent customer transition without consent.
 
-```text
-/api/v1
-```
+### Flight Search
+- One-way search.
+- Round-trip search.
+- Invalid dates.
+- Same origin and destination.
+- Empty results.
+- Different passenger counts.
 
-## Authentication
+### Booking
+- Successful booking.
+- Invalid passenger data.
+- Price change.
+- Availability change.
+- Duplicate booking request.
+- Reservation timeout.
+- Uncertain supplier result.
 
-```text
-GET    /auth/me
-POST   /auth/logout
-```
+### Payment
+- Successful payment.
+- Failed payment.
+- Pending payment.
+- Retry.
+- Reconciliation.
+- Duplicate payment request.
 
-Registration, login, and password reset can initially use Supabase Auth directly through its supported client flows.
+### Ticketing
+- Simulated automatic supplier issuance.
+- Supplier issuance exception.
+- Administrative issuance.
+- Duplicate ticket issuance prevention.
 
-## Flights
+### Cancellation
+- Customer cancellation request.
+- Authorized agency cancellation request.
+- Unauthorized cancellation request.
+- Administrator approval.
+- Administrator rejection.
 
-```text
-POST   /flights/search
-GET    /flights/search/:searchId
-GET    /flights/offers/:offerId
-POST   /flights/offers/:offerId/price
-```
-
-## Bookings
-
-```text
-POST   /bookings
-GET    /bookings
-GET    /bookings/:bookingId
-POST   /bookings/:bookingId/cancel
-```
-
-Cancellation must only be enabled when the supplier supports it and the booking is eligible.
-
-## Passengers
-
-```text
-GET    /passengers
-POST   /passengers
-PUT    /passengers/:passengerId
-DELETE /passengers/:passengerId
-```
-
-## Payments
-
-```text
-POST   /payments/intents
-GET    /payments/:paymentId
-POST   /payments/webhooks/:provider
-```
-
-Payment endpoints remain disabled until a real provider is configured.
-
-## AI
-
-```text
-POST   /ai/chat
-GET    /ai/conversations
-GET    /ai/conversations/:conversationId
-```
-
-## Admin
-
-```text
-GET    /admin/overview
-GET    /admin/users
-GET    /admin/bookings
-GET    /admin/suppliers
-POST   /admin/suppliers
-PUT    /admin/suppliers/:supplierId
-GET    /admin/system-logs
-GET    /admin/pricing-rules
-POST   /admin/pricing-rules
-```
-
-Every endpoint must have request validation, authorization, consistent response formats, and appropriate error handling.
+### Release Quality
+- No cross-agency data leakage.
+- No duplicate reservations from retries.
+- No duplicate payment processing.
+- Correct price snapshots.
+- Correct booking event history.
+- Responsive frontend.
+- Successful production deployment.
 
 ---
 
-# 8. Repository Structure
+## 19. Development Milestones
 
-Use a single repository.
+### Milestone 1: Project Foundation
+- Initialize repository.
+- Configure frontend and backend.
+- Configure Supabase.
+- Establish database migrations.
+- Configure authentication.
+- Establish application layouts.
+- Establish coding conventions.
 
-```text
-travel-platform/
-│
-├── apps/
-│   ├── web/
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── components/
-│   │   │   ├── features/
-│   │   │   │   ├── auth/
-│   │   │   │   ├── flights/
-│   │   │   │   ├── bookings/
-│   │   │   │   ├── passengers/
-│   │   │   │   ├── payments/
-│   │   │   │   ├── assistant/
-│   │   │   │   └── admin/
-│   │   │   ├── hooks/
-│   │   │   └── lib/
-│   │   └── package.json
-│   │
-│   └── api/
-│       ├── src/
-│       │   ├── modules/
-│       │   │   ├── auth/
-│       │   │   ├── users/
-│       │   │   ├── flights/
-│       │   │   ├── suppliers/
-│       │   │   ├── bookings/
-│       │   │   ├── pricing/
-│       │   │   ├── payments/
-│       │   │   ├── assistant/
-│       │   │   └── admin/
-│       │   ├── integrations/
-│       │   │   ├── flight-suppliers/
-│       │   │   │   ├── amadeus/
-│       │   │   │   └── mock/
-│       │   │   └── payment-providers/
-│       │   ├── middleware/
-│       │   ├── database/
-│       │   ├── lib/
-│       │   └── index.ts
-│       └── package.json
-│
-├── packages/
-│   ├── shared/
-│   │   ├── types/
-│   │   ├── schemas/
-│   │   └── constants/
-│   └── config/
-│
-├── docs/
-│   ├── PRD.md
-│   ├── ARCHITECTURE.md
-│   ├── DATABASE.md
-│   ├── API.md
-│   └── SUPPLIERS.md
-│
-├── package.json
-└── README.md
-```
+### Milestone 2: User and Agency Management
+- Customer profiles.
+- Agency creation.
+- Agency invitation.
+- Customer consent and association.
+- Role-based authorization.
 
-Use npm workspaces initially. Avoid adding a complex monorepo tool unless the project grows enough to justify it.
+### Milestone 3: Flight Search
+- Airport and airline fixtures.
+- Mock supplier adapter.
+- One-way and round-trip search.
+- Flight results and details.
+- Mock inventory indicators.
 
----
-
-# 9. $0 Infrastructure and Deployment Plan
-
-## 9.1 Initial hosting
-
-| Service | Choice | Initial cost |
-|---|---|---:|
-| Frontend | Vercel Hobby Free | $0 |
-| Backend API | Vercel Serverless Functions Free | $0 |
-| Database | Supabase Free | $0 |
-| Authentication | Supabase Auth Free | $0 |
-| Source code | GitHub Free | $0 |
-| CI/CD | GitHub Actions Free allowance | $0 |
-| API documentation | Scalar / OpenAPI | $0 |
-| AI | Optional free-tier provider | $0 within available quota |
-| Email | In-app notifications initially | $0 |
-| Domain | Vercel-provided subdomain (.vercel.app) | $0 |
-
-**Estimated initial infrastructure cost: $0/month**, provided the project stays within free-tier quotas and provider terms.
-
-A custom domain is optional and generally costs money. Do not purchase one for the initial prototype.
-
-## 9.2 Deployment process
-
-**Frontend:**
-
-1. Push the repository to GitHub.
-2. Connect the repository to Vercel.
-3. Configure the frontend root directory (`apps/web`).
-4. Configure the build command (`next build`).
-5. Add the API base URL (`NEXT_PUBLIC_API_BASE_URL`).
-6. Deploy.
-
-**Backend:**
-
-1. Connect the API project to Vercel (or deploy via Vercel CLI).
-2. Configure the backend root directory (`apps/api`) and build settings.
-3. Add environment variables and secrets in the Vercel dashboard.
-4. Configure Supabase database connection.
-5. Deploy to Vercel.
-
-**Database:**
-
-1. Create a Supabase project.
-2. Create the PostgreSQL schema.
-3. Run Drizzle migrations.
-4. Configure authentication.
-5. Configure database access policies.
-6. Add production environment variables.
-
-## 9.3 Environment variables
-
-Example:
-
-```env
-# Frontend
-NEXT_PUBLIC_API_BASE_URL=
-
-# Backend
-DATABASE_URL=
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-AMADEUS_CLIENT_ID=
-AMADEUS_CLIENT_SECRET=
-AMADEUS_BASE_URL=
-
-AI_PROVIDER=
-AI_API_KEY=
-
-APP_ENV=development
-```
-
-Never expose service-role keys, supplier secrets, or AI provider secrets through frontend environment variables.
-
-Use Vercel Environment Variables for private credentials.
-
-## 9.4 Cost and usage safeguards
-
-- Configure usage alerts where available.
-- Avoid unnecessary API calls.
-- Cache safe search results briefly.
-- Limit search request frequency per user.
-- Avoid storing unnecessary large supplier payloads.
-- Add pagination.
-- Restrict AI usage per user.
-- Do not run expensive scheduled jobs.
-- Avoid unbounded retries.
-- Keep a database backup/export procedure.
-
-Free plans can change and may have inactivity, retention, or usage restrictions. Review the provider's current terms before launch.
-
----
-
-# 10. Testing Strategy
-
-## Unit tests
-
-Test:
-
-- Currency conversion.
-- Markup calculations.
-- Flight normalization.
-- Supplier response mapping.
-- Booking status transitions.
-- Request validation.
-- Role permissions.
-
-## Integration tests
-
-Test:
-
-- Supabase database operations.
-- Supplier authentication.
-- Flight search.
-- Fare revalidation.
+### Milestone 4: Booking Engine
+- Passenger information.
+- Price calculation.
+- Price snapshots.
 - Booking creation.
-- Supplier timeout handling.
-- Booking reconciliation.
+- Idempotency.
+- Mock reservation.
+- PNR generation.
 
-## End-to-end tests
+### Milestone 5: Payments and Fulfillment
+- Simulated payment provider.
+- Payment attempts.
+- Retry and reconciliation.
+- Ticketing workflow.
+- Administrative ticket issuance.
 
-Test:
+### Milestone 6: Admin and Cancellation
+- Admin dashboard.
+- Booking management.
+- Payment operations.
+- Ticketing queue.
+- Cancellation requests.
+- Audit history.
 
-1. Register a customer.
-2. Log in.
-3. Search for a flight.
-4. Select a result.
-5. Verify its price.
-6. Enter passenger details.
-7. Submit a sandbox booking.
-8. View booking status.
-9. Open the booking in the admin dashboard.
-
-## Failure scenarios
-
-- Supplier returns an error.
-- Supplier times out.
-- Offer expires.
-- Price changes.
-- Booking submission is duplicated.
-- Database connection fails.
-- AI provider is unavailable.
-- User attempts unauthorized access.
-
----
-
-# 11. Security Requirements
-
-- HTTPS everywhere.
-- Secure authentication.
-- Server-side role checks.
-- Input validation using Zod.
-- Rate limiting.
-- Secure secret management.
-- Protection against SQL injection.
-- Protection against XSS.
-- CSRF protection where applicable.
-- Strict CORS configuration.
-- Sensitive-data redaction in logs.
-- Audit logging.
-- Database access policies.
-- Idempotent booking endpoints.
-- No storage of card details.
-- Restricted access to passport information.
-
-The MVP must not claim PCI compliance, IATA accreditation, or production-grade travel distribution certification unless those have actually been obtained.
+### Milestone 7: Testing and Deployment
+- Automated tests.
+- Security checks.
+- End-to-end user journeys.
+- Deployment.
+- Seed data.
+- Demo preparation.
 
 ---
 
-# 12. Development Roadmap
+## 20. Definition of Done
 
-Suggested schedule for one experienced full-stack engineer.
+The MVP is ready for demonstration when the following end-to-end scenarios work.
 
-| Phase | Scope | Estimate |
-|---|---|---:|
-| 1 | Project setup, architecture, database, authentication | 2–3 days |
-| 2 | UI foundation, customer dashboard, admin layout | 2–3 days |
-| 3 | Supplier adapter and flight search | 3–4 days |
-| 4 | Flight results, filtering, offer details | 2–3 days |
-| 5 | Fare verification and pricing | 2–3 days |
-| 6 | Booking workflow and passenger management | 3–4 days |
-| 7 | Booking dashboard and admin operations | 2–3 days |
-| 8 | AI travel assistant | 2–3 days |
-| 9 | Testing, security, deployment, documentation | 3–4 days |
+### Scenario A: Direct Customer Booking
 
-**Estimated total: 21–30 working days.**
+1. Customer registers.
+2. Customer logs in.
+3. Customer searches a flight.
+4. Customer selects an itinerary.
+5. Customer enters passenger details.
+6. Customer completes simulated payment.
+7. System creates a confirmed reservation.
+8. System generates a PNR.
+9. Admin issues a mock ticket.
+10. Customer views the ticket and booking details.
 
-This is a development estimate, not a guaranteed delivery date. Supplier API access, sandbox restrictions, and booking workflow complexity can change the timeline.
+### Scenario B: Agency-Assisted Booking
 
----
+1. Agency owner registers.
+2. Agency owner creates an agency.
+3. Agency owner invites a customer.
+4. Customer accepts the invitation.
+5. Customer becomes associated with the agency.
+6. Agency owner searches flights.
+7. Agency owner books for the associated customer.
+8. System records the customer as booking owner and agency owner as creator.
+9. Booking completes through the same reservation and payment lifecycle.
+10. Both authorized parties can view the booking.
 
-# 13. MVP Acceptance Criteria
+### Scenario C: Payment Failure and Recovery
 
-The MVP is ready for demonstration when:
+1. Customer starts booking.
+2. Simulated payment enters a failure or uncertain state.
+3. System does not create a duplicate reservation.
+4. Reconciliation checks the existing transaction.
+5. Retry is allowed only when safe.
+6. Final state is persisted and audited.
+7. Administrator can investigate unresolved outcomes.
 
-- [ ] A customer can register and log in.
-- [ ] A customer can search for flights.
-- [ ] Flight results come from a configured sandbox supplier.
-- [ ] Search results are normalized.
-- [ ] A customer can inspect flight details.
-- [ ] A customer can revalidate a fare.
-- [ ] Price changes are displayed correctly.
-- [ ] Passenger details can be submitted.
-- [ ] A sandbox booking can be created where the provider supports it.
-- [ ] Booking status is persisted.
-- [ ] Duplicate submissions are prevented.
-- [ ] Customers can view their bookings.
-- [ ] Administrators can view and investigate bookings.
-- [ ] Pricing rules can be configured.
-- [ ] Multi-currency amounts are stored correctly.
-- [ ] The AI assistant can search actual available offers through backend tools.
-- [ ] AI cannot falsely confirm bookings.
-- [ ] Payment is clearly identified as simulated or disabled.
-- [ ] The application is deployed and publicly accessible.
-- [ ] Automated tests cover the critical booking flow.
-- [ ] API documentation is available.
+### Scenario D: Supplier Exception and Ticketing
 
----
+1. Reservation succeeds.
+2. Mock supplier reports a ticketing exception.
+3. Booking enters the administrative fulfillment queue.
+4. Admin reviews the booking.
+5. Admin issues the mock ticket.
+6. Booking becomes `TICKETED`.
+7. Ticket issuance is visible in booking history.
 
-# 14. Future Roadmap
+### Scenario E: Cancellation Request
 
-## Phase 2 — Commercial travel platform
-
-- Production supplier credentials.
-- Multiple flight suppliers.
-- Hotel supplier integration.
-- Real payment gateway.
-- Ticket issuance.
-- Cancellation and refund workflows.
-- Booking changes and reissuance.
-- Supplier reconciliation.
-- Email and SMS notifications.
-
-## Phase 3 — B2B travel distribution
-
-- Agency registration.
-- Agency accounts.
-- Agent dashboard.
-- Agency-specific markups.
-- Commission management.
-- Credit limits.
-- Sub-agents.
-- Corporate accounts.
-- White-label booking websites.
-- Agency API access.
-
-## Phase 4 — Advanced AI travel platform
-
-- Conversational itinerary planning.
-- Multi-city trip planning.
-- Hotel and flight combinations.
-- Personalized recommendations.
-- Booking support agent.
-- Travel disruption assistance.
-- Rebooking suggestions.
-- AI-powered customer support.
-- Agentic workflows with explicit booking authorization.
-
-## Phase 5 — Scale and infrastructure
-
-Only when justified by usage:
-
-- Redis caching.
-- Background job processing.
-- Message queues.
-- Kafka or another event streaming platform.
-- Dedicated search infrastructure.
-- Service extraction.
-- Advanced monitoring.
-- Multi-region infrastructure.
+1. Customer or authorized agency owner opens an eligible booking.
+2. User submits cancellation request.
+3. Booking becomes `CANCELLATION_PENDING`.
+4. Admin reviews the request.
+5. Admin approves or rejects.
+6. The final decision is recorded in the audit history.
 
 ---
 
-# 15. Key Product and Technical Decisions
+## 21. $0 Cost Development Policy
 
-| Decision | MVP choice |
-|---|---|
-| Business model | Start with a customer-facing booking experience |
-| Product architecture | Modular monolith |
-| Primary travel product | Flights |
-| Initial supplier | Amadeus sandbox, if eligible |
-| Hotel functionality | Domain foundation, later integration |
-| Payments | Simulated/disabled |
-| AI | Optional assistant with backend tools |
-| Database | PostgreSQL |
-| Backend | Hono + TypeScript |
-| Frontend | Next.js |
-| Hosting | Vercel |
-| Authentication | Supabase Auth |
-| ORM | Drizzle |
-| Infrastructure budget | $0 initial |
-| Deployment | GitHub-connected CI/CD |
-| Docker | Not required |
-| Microservices | Not required |
+The following rules are mandatory for the initial MVP.
+
+1. Use free-tier hosting.
+2. Use free-tier database and authentication.
+3. Use open-source libraries.
+4. Use local development environments.
+5. Use deterministic mock supplier data.
+6. Use simulated payments.
+7. Do not purchase GDS access.
+8. Do not purchase commercial API access.
+9. Do not purchase an initial domain.
+10. Do not purchase an AI API subscription for the MVP.
+11. Do not introduce paid monitoring or analytics.
+12. Do not introduce infrastructure that is unnecessary for the initial demo.
+
+The application must be designed so that supplier credentials and payment credentials can be added through secure environment configuration later.
 
 ---
 
-# 16. Product Success Metrics
+## 22. Future Product Considerations (Not MVP Requirements)
 
-Track the following from the beginning:
+These are intentionally outside the initial implementation:
 
-**Acquisition**
-- Registered users.
-- Active users.
-- Search sessions.
+- Amadeus integration.
+- Sabre integration.
+- Travelport integration.
+- Real airline inventory.
+- Real ticket issuance.
+- Hotel and accommodation suppliers.
+- Live payment gateways.
+- Multi-currency conversion.
+- Market-specific pricing.
+- Agency commission management.
+- Agency wallet and credit facilities.
+- Real cancellation and refund integrations.
+- AI-powered natural-language travel search.
+- AI itinerary planning.
+- Advanced analytics.
 
-**Search**
-- Search success rate.
-- Supplier response time.
-- Search-to-offer conversion.
-
-**Booking**
-- Offer-to-booking conversion.
-- Booking confirmation rate.
-- Booking failure rate.
-- Duplicate booking attempts.
-- Price-change frequency.
-
-**AI**
-- Assistant usage.
-- Successful search tool calls.
-- AI-assisted search conversion.
-- Incorrect or unsupported response rate.
-
-**Operations**
-- Supplier uptime.
-- API error rate.
-- Average booking processing time.
-- Reconciliation backlog.
-
-Do not treat simulated bookings or estimated revenue as real commercial transactions.
+These should be introduced only after the business requirements, supplier agreements, and technical feasibility are established.
 
 ---
 
-# 17. Final MVP Recommendation
+## 23. Final Product Definition
 
-Build the first release as a **flight-first, AI-assisted travel booking platform with a supplier-independent booking engine**.
+The MVP is a flight-first travel booking application with two customer acquisition and booking channels:
 
-The most important engineering priorities are:
+1. Direct B2C customer booking.
+2. Agency-assisted customer booking.
 
-1. Supplier integration and normalization.
-2. Flight search and offer management.
-3. Fare revalidation.
-4. Reliable booking state management.
-5. Passenger information handling.
-6. Pricing and currency calculations.
-7. Admin visibility and reconciliation.
-8. AI assistance on top of real backend capabilities.
+Both channels use the same centralized booking engine, pricing rules, reservation workflow, payment simulation, and ticket fulfillment system.
 
-Avoid spending the first month building a complex microservices architecture, a large hotel catalog, or a sophisticated AI agent before the core booking lifecycle works.
+The product will initially operate entirely on mock flight inventory and simulated payment processing, while maintaining clear integration boundaries for future GDS, airline, supplier, and payment provider connections.
 
-**The first successful milestone should be simple: a user searches for a real sandbox flight, selects an offer, verifies its price, submits passenger information, creates a supplier-backed sandbox booking, and sees the correct booking status in both the customer and admin dashboards.**
+The objective is not to simulate an entire mature OTA business. It is to demonstrate a reliable and extensible foundation for the core travel booking business.
 
-That is the foundation on which the larger travel platform can be built.
+**Final engineering principle: Build the real application architecture, simulate only the external services that cannot be accessed for free.**
