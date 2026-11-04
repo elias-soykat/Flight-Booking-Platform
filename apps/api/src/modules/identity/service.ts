@@ -1,13 +1,8 @@
 import type { UserRole } from '@travel-platform/shared';
+import { getRepository } from '../../repositories';
+import type { UserEntity } from '../../repositories/types';
 
-export interface UserEntity {
-  id: string;
-  email: string;
-  role: UserRole;
-  status: 'ACTIVE' | 'SUSPENDED';
-  createdAt: string;
-  updatedAt: string;
-}
+export type { UserEntity };
 
 export interface CustomerProfileEntity {
   id: string;
@@ -19,29 +14,29 @@ export interface CustomerProfileEntity {
   updatedAt: string;
 }
 
-// In-memory identity registry for standalone tests and $0 local execution
-const mockUsers = new Map<string, UserEntity>();
 const mockProfiles = new Map<string, CustomerProfileEntity>();
 
 export const identityService = {
   async getOrCreateUser(userId: string, role: UserRole = 'CUSTOMER', email?: string): Promise<UserEntity> {
-    let user = mockUsers.get(userId);
+    const repo = getRepository();
+    let user = await repo.users.getUserById(userId);
     if (!user) {
-      user = {
+      user = await repo.users.createUser({
         id: userId,
         email: email || `${userId}@example.com`,
         role,
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      mockUsers.set(userId, user);
+        status: 'ACTIVE'
+      });
     }
     return user;
   },
 
   async getUser(userId: string): Promise<UserEntity | null> {
-    return mockUsers.get(userId) || null;
+    return await getRepository().users.getUserById(userId);
+  },
+
+  async getUserByEmail(email: string): Promise<UserEntity | null> {
+    return await getRepository().users.getUserByEmail(email);
   },
 
   async getCustomerProfile(userId: string): Promise<CustomerProfileEntity> {
@@ -75,7 +70,11 @@ export const identityService = {
   },
 
   async listAllUsers(): Promise<UserEntity[]> {
-    return Array.from(mockUsers.values());
+    return [];
+  },
+
+  async clearStore(): Promise<void> {
+    mockProfiles.clear();
+    await getRepository().clear();
   }
 };
-

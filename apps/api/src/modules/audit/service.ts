@@ -1,38 +1,38 @@
 import type { AuditLogEntity } from '@travel-platform/shared';
+import { getRepository } from '../../repositories';
 
-const auditLogsStore = new Map<string, AuditLogEntity>();
+export interface LogActionParams {
+  actorUserId?: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata?: Record<string, unknown>;
+}
 
 export const auditService = {
-  async logAction(entry: {
-    actorUserId?: string;
-    action: string;
-    entityType: string;
-    entityId: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<AuditLogEntity> {
-    const id = crypto.randomUUID();
-    const log: AuditLogEntity = {
-      id,
-      actorUserId: entry.actorUserId,
-      action: entry.action,
-      entityType: entry.entityType,
-      entityId: entry.entityId,
-      metadata: entry.metadata,
-      createdAt: new Date().toISOString(),
+  async logAction(params: LogActionParams): Promise<AuditLogEntity> {
+    const entry: AuditLogEntity = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      actorUserId: params.actorUserId,
+      action: params.action,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      metadata: params.metadata,
+      createdAt: new Date().toISOString()
     };
-    auditLogsStore.set(id, log);
-    return log;
+
+    return await getRepository().audit.logAction(entry);
   },
 
-  async listLogs(limit = 50): Promise<AuditLogEntity[]> {
-    const logs = Array.from(auditLogsStore.values());
-    // Sort descending by createdAt
-    logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return logs.slice(0, limit);
+  async getRecentLogs(limit: number = 50): Promise<AuditLogEntity[]> {
+    return await getRepository().audit.listLogs(limit);
   },
 
-  // Test helper
-  clear(): void {
-    auditLogsStore.clear();
+  async listLogs(limit: number = 50): Promise<AuditLogEntity[]> {
+    return await getRepository().audit.listLogs(limit);
   },
+
+  async clearStore(): Promise<void> {
+    await getRepository().clear();
+  }
 };

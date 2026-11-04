@@ -1,14 +1,14 @@
 import type {
   CancellationRequestEntity,
-  AdminDashboardMetrics,
-  UserRole
+  AdminDashboardMetrics
 } from '@travel-platform/shared';
 import { bookingService } from '../booking/service';
 import { defaultFlightSupplier } from '../supplier/mock-supplier';
 import { auditService } from '../audit/service';
-import { paymentService } from '../payment/service';
 import { identityService } from '../identity/service';
 import { agencyService } from '../agency/service';
+import { paymentService } from '../payment/service';
+import { getRepository } from '../../repositories';
 
 export class CancellationError extends Error {
   code: string;
@@ -26,7 +26,7 @@ export interface RequestCancellationParams {
   bookingId: string;
   reason: string;
   userId: string;
-  userRole: UserRole;
+  userRole: string;
 }
 
 export interface ReviewCancellationParams {
@@ -36,15 +36,13 @@ export interface ReviewCancellationParams {
   adminUserId: string;
 }
 
-// In-memory store for cancellation requests
-const cancellationRequestsStore = new Map<string, CancellationRequestEntity>();
-
 export const cancellationService = {
   async requestCancellation(params: RequestCancellationParams): Promise<CancellationRequestEntity> {
     const { bookingId, reason, userId, userRole } = params;
+    const repo = getRepository();
 
     // 1. Fetch booking with authorization check
-    const booking = await bookingService.getBookingById(bookingId, userId, userRole);
+    const booking = await bookingService.getBookingById(bookingId, userId, userRole as any);
     if (!booking) {
       throw new CancellationError('BOOKING_NOT_FOUND', `Booking '${bookingId}' not found`, 404);
     }
@@ -59,10 +57,8 @@ export const cancellationService = {
     }
 
     // 3. Ensure no active pending request exists for this booking
-    const existingPending = Array.from(cancellationRequestsStore.values()).find(
-      r => r.bookingId === bookingId && r.status === 'PENDING'
-    );
-    if (existingPending) {
+    const existing = await repo.cancellations.getCancellationRequestByBookingId(bookingId);
+    if (existing && existing.status === 'PENDING') {
       throw new CancellationError(
         'CANCELLATION_ALREADY_PENDING',
         'A cancellation request is already pending review for this booking',
@@ -93,7 +89,7 @@ export const cancellationService = {
       updatedAt: now
     };
 
-    cancellationRequestsStore.set(req.id, req);
+    await repo.cancellations.createCancellationRequest(req);
 
     // 6. Record Audit Log
     await auditService.logAction({
@@ -114,8 +110,9 @@ export const cancellationService = {
 
   async reviewCancellation(params: ReviewCancellationParams): Promise<CancellationRequestEntity> {
     const { requestId, decision, reviewNote, adminUserId } = params;
+    const repo = getRepository();
 
-    const req = cancellationRequestsStore.get(requestId);
+    const req = await repo.cancellations.getCancellationRequestById(requestId);
     if (!req) {
       throw new CancellationError('REQUEST_NOT_FOUND', `Cancellation request '${requestId}' not found`, 404);
     }
@@ -189,24 +186,24 @@ export const cancellationService = {
     req.reviewNote = reviewNote;
     req.updatedAt = now;
 
-    cancellationRequestsStore.set(req.id, req);
-    return req;
+    return await repo.cancellations.updateCancellationRequest(req.id, {
+      status: req.status,
+      reviewedByUserId: req.reviewedByUserId,
+      reviewedAt: req.reviewedAt,
+      reviewNote: req.reviewNote
+    });
   },
 
   async getPendingCancellations(): Promise<CancellationRequestEntity[]> {
-    return Array.from(cancellationRequestsStore.values())
-      .filter(r => r.status === 'PENDING')
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return await getRepository().cancellations.listPendingRequests();
   },
 
   async getCancellationForBooking(bookingId: string): Promise<CancellationRequestEntity | null> {
-    const list = Array.from(cancellationRequestsStore.values())
-      .filter(r => r.bookingId === bookingId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return list[0] || null;
+    return await getRepository().cancellations.getCancellationRequestByBookingId(bookingId);
   },
 
   async getDashboardMetrics(): Promise<AdminDashboardMetrics> {
+    const repo = getRepository();
     const allBookings = await bookingService.listBookings('admin', 'ADMIN');
     const users = await identityService.listAllUsers();
     const agencies = await agencyService.listAllAgencies();
@@ -238,8 +235,7 @@ export const cancellationService = {
     };
   },
 
-  clear(): void {
-    cancellationRequestsStore.clear();
+  async clear(): Promise<void> {
+    await getRepository().clear();
   }
 };
-

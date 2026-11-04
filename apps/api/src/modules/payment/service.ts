@@ -7,6 +7,7 @@ import type {
 import { bookingService } from '../booking/service';
 import { defaultFlightSupplier } from '../supplier/mock-supplier';
 import { auditService } from '../audit/service';
+import { getRepository } from '../../repositories';
 
 export class PaymentError extends Error {
   code: string;
@@ -40,19 +41,16 @@ export interface ProcessPaymentResult {
   tickets: TicketEntity[];
 }
 
-// In-memory storage for test/edge runtime
-const paymentsStore = new Map<string, PaymentAttemptEntity>();
-const ticketsStore = new Map<string, TicketEntity>();
-const idempotencyStore = new Map<string, ProcessPaymentResult>();
-
 export const paymentService = {
   async processPayment(params: ProcessPaymentParams): Promise<ProcessPaymentResult> {
     const { bookingId, scenario = 'SUCCESS', idempotencyKey, userId, userRole } = params;
+    const repo = getRepository();
 
     // 1. Idempotency Check
-    const cached = idempotencyStore.get(idempotencyKey);
+    const cached = await repo.payments.getPaymentByIdempotencyKey(idempotencyKey);
     if (cached) {
-      return cached;
+      const tickets = await repo.tickets.getTicketsByBookingId(cached.bookingId);
+      return { payment: cached, tickets };
     }
 
     // 2. Fetch and Validate Booking
@@ -95,46 +93,41 @@ export const paymentService = {
         // Generate mock 13-digit ticket numbers for each passenger
         tickets = booking.passengers.map((pax) => {
           const tktNumber = `001-DEMO-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-          const ticket: TicketEntity = {
+          return {
             id: `tkt-${Date.now()}-${pax.id}`,
             bookingId: booking.id,
             passengerId: pax.id,
             passengerName: `${pax.firstName} ${pax.lastName}`,
             ticketNumber: tktNumber,
-            issuanceMethod: 'AUTOMATIC_SIMULATED',
+            issuanceMethod: 'AUTOMATIC_SIMULATED' as const,
             issuedAt: now
           };
-          ticketsStore.set(ticket.id, ticket);
-          return ticket;
         });
 
-        // Update booking to TICKETED
+        // Update booking state to TICKETED
         await bookingService.updateBookingStatus(booking.id, 'TICKETED', userId, {
           paymentReference,
-          ticketNumbers: tickets.map(t => t.ticketNumber)
+          ticketNumbers: tickets.map((t) => t.ticketNumber),
+          issuanceMethod: 'AUTOMATIC_SIMULATED'
+        });
+      } else {
+        // Payment succeeded but ticketing failed -> routes to admin ticketing queue
+        await bookingService.updateBookingStatus(booking.id, 'CONFIRMED', userId, {
+          paymentReference,
+          ticketingFailure: issuance.failureReason || 'Supplier ticketing failed'
         });
       }
     } else if (scenario === 'DECLINE') {
       status = 'FAILED';
-      failureReason = 'Card declined by issuing bank';
-      await bookingService.updateBookingStatus(booking.id, 'CONFIRMED', userId, {
-        paymentAttemptFailed: true,
-        reason: failureReason
-      });
+      failureReason = 'Payment declined by issuing bank (simulated)';
+      // Booking remains in CONFIRMED state to allow retry
     } else if (scenario === 'TIMEOUT') {
       status = 'UNKNOWN';
-      failureReason = 'Payment gateway timeout awaiting confirmation';
-      await bookingService.updateBookingStatus(booking.id, 'CONFIRMED', userId, {
-        paymentAttemptUnknown: true,
-        reason: failureReason
-      });
+      failureReason = 'Payment gateway timeout (simulated); status unknown pending reconciliation';
+      // Route to admin reconciliation
     } else if (scenario === 'INSUFFICIENT_FUNDS') {
       status = 'FAILED';
-      failureReason = 'Insufficient funds in payment account';
-      await bookingService.updateBookingStatus(booking.id, 'CONFIRMED', userId, {
-        paymentAttemptFailed: true,
-        reason: failureReason
-      });
+      failureReason = 'Insufficient funds in customer account (simulated)';
     }
 
     const payment: PaymentAttemptEntity = {
@@ -151,65 +144,74 @@ export const paymentService = {
       updatedAt: now
     };
 
-    paymentsStore.set(payment.id, payment);
+    // Store payment and tickets in repository
+    await repo.payments.createPayment(payment);
+    if (tickets.length > 0) {
+      await repo.tickets.createTickets(tickets);
+    }
 
-    const result: ProcessPaymentResult = { payment, tickets };
-    idempotencyStore.set(idempotencyKey, result);
-
-    return result;
+    return { payment, tickets };
   },
 
   async reconcilePayment(params: ReconcilePaymentParams): Promise<ProcessPaymentResult> {
     const { paymentId, action, note, adminUserId } = params;
-    const payment = paymentsStore.get(paymentId);
+    const repo = getRepository();
+
+    const payment = await repo.payments.getPaymentById(paymentId);
     if (!payment) {
-      throw new PaymentError('PAYMENT_NOT_FOUND', `Payment attempt '${paymentId}' not found`, 404);
+      throw new PaymentError('PAYMENT_NOT_FOUND', `Payment '${paymentId}' not found`, 404);
+    }
+
+    const booking = await bookingService.getBookingById(payment.bookingId, adminUserId, 'ADMIN');
+    if (!booking) {
+      throw new PaymentError('BOOKING_NOT_FOUND', `Associated booking '${payment.bookingId}' not found`, 404);
     }
 
     const now = new Date().toISOString();
-    payment.reconciledAt = now;
-    payment.reconciliationNote = note;
-    payment.updatedAt = now;
-
     let tickets: TicketEntity[] = [];
 
     if (action === 'FORCE_SUCCESS') {
       payment.status = 'RECONCILED';
-      payment.failureReason = undefined;
+      payment.reconciledAt = now;
+      payment.reconciliationNote = note;
 
-      // Ensure booking moves to TICKETED and tickets are issued
-      const booking = await bookingService.getBookingById(payment.bookingId, adminUserId, 'ADMIN');
-      if (booking) {
-        const existingTickets = await this.getTicketsForBooking(booking.id);
-        if (existingTickets.length > 0) {
-          tickets = existingTickets;
-        } else {
-          tickets = booking.passengers.map((pax) => {
-            const ticket: TicketEntity = {
-              id: `tkt-${Date.now()}-${pax.id}`,
-              bookingId: booking.id,
-              passengerId: pax.id,
-              passengerName: `${pax.firstName} ${pax.lastName}`,
-              ticketNumber: `001-DEMO-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-              issuanceMethod: 'ADMIN_MANUAL',
-              issuedByUserId: adminUserId,
-              issuedAt: now
-            };
-            ticketsStore.set(ticket.id, ticket);
-            return ticket;
-          });
-        }
-
-        await bookingService.updateBookingStatus(booking.id, 'TICKETED', adminUserId, {
-          reconciledBy: adminUserId,
-          reconciliationNote: note,
-          paymentReference: payment.paymentReference
+      // Check if tickets already exist
+      const existingTickets = await repo.tickets.getTicketsByBookingId(booking.id);
+      if (existingTickets.length > 0) {
+        tickets = existingTickets;
+      } else {
+        // Issue tickets via reconciliation
+        tickets = booking.passengers.map((pax) => {
+          return {
+            id: `tkt-${Date.now()}-${pax.id}`,
+            bookingId: booking.id,
+            passengerId: pax.id,
+            passengerName: `${pax.firstName} ${pax.lastName}`,
+            ticketNumber: `001-DEMO-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+            issuanceMethod: 'ADMIN_MANUAL' as const,
+            issuedByUserId: adminUserId,
+            issuedAt: now
+          };
         });
+        await repo.tickets.createTickets(tickets);
       }
+
+      await bookingService.updateBookingStatus(booking.id, 'TICKETED', adminUserId, {
+        reconciledBy: adminUserId,
+        reconciliationNote: note,
+        paymentReference: payment.paymentReference
+      });
     } else {
       payment.status = 'FAILED';
       payment.failureReason = `Reconciled as failed by administrator: ${note}`;
     }
+
+    await repo.payments.updatePayment(payment.id, {
+      status: payment.status,
+      failureReason: payment.failureReason,
+      reconciledAt: payment.reconciledAt,
+      reconciliationNote: payment.reconciliationNote
+    });
 
     await auditService.logAction({
       actorUserId: adminUserId,
@@ -228,30 +230,31 @@ export const paymentService = {
   },
 
   async issueTicketsManually(bookingId: string, adminUserId: string): Promise<TicketEntity[]> {
+    const repo = getRepository();
     const booking = await bookingService.getBookingById(bookingId, adminUserId, 'ADMIN');
     if (!booking) {
       throw new PaymentError('BOOKING_NOT_FOUND', `Booking '${bookingId}' not found`, 404);
     }
 
     const now = new Date().toISOString();
-    const tickets = booking.passengers.map((pax) => {
-      const ticket: TicketEntity = {
+    const tickets: TicketEntity[] = booking.passengers.map((pax) => {
+      return {
         id: `tkt-${Date.now()}-${pax.id}`,
         bookingId: booking.id,
         passengerId: pax.id,
         passengerName: `${pax.firstName} ${pax.lastName}`,
         ticketNumber: `001-DEMO-${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-        issuanceMethod: 'ADMIN_MANUAL',
+        issuanceMethod: 'ADMIN_MANUAL' as const,
         issuedByUserId: adminUserId,
         issuedAt: now
       };
-      ticketsStore.set(ticket.id, ticket);
-      return ticket;
     });
+
+    await repo.tickets.createTickets(tickets);
 
     await bookingService.updateBookingStatus(booking.id, 'TICKETED', adminUserId, {
       manuallyIssuedBy: adminUserId,
-      ticketNumbers: tickets.map(t => t.ticketNumber)
+      ticketNumbers: tickets.map((t) => t.ticketNumber)
     });
 
     await auditService.logAction({
@@ -260,7 +263,7 @@ export const paymentService = {
       entityType: 'BOOKING',
       entityId: bookingId,
       metadata: {
-        ticketNumbers: tickets.map(t => t.ticketNumber)
+        ticketNumbers: tickets.map((t) => t.ticketNumber)
       }
     });
 
@@ -268,31 +271,36 @@ export const paymentService = {
   },
 
   async getPaymentsForBooking(bookingId: string): Promise<PaymentAttemptEntity[]> {
-    return Array.from(paymentsStore.values()).filter(p => p.bookingId === bookingId);
+    return await getRepository().payments.listPaymentsForBooking(bookingId);
   },
 
   async getTicketsForBooking(bookingId: string): Promise<TicketEntity[]> {
-    return Array.from(ticketsStore.values()).filter(t => t.bookingId === bookingId);
+    return await getRepository().tickets.getTicketsByBookingId(bookingId);
   },
 
   async listAllPayments(): Promise<PaymentAttemptEntity[]> {
-    return Array.from(paymentsStore.values());
+    return await getRepository().payments.listAllPayments();
   },
 
   async getUnreconciledPayments(): Promise<PaymentAttemptEntity[]> {
-    return Array.from(paymentsStore.values()).filter(p => p.status === 'UNKNOWN');
+    return await getRepository().payments.listUnreconciledPayments();
   },
 
   async getAdminTicketingQueue() {
+    const repo = getRepository();
     const allBookings = await bookingService.listBookings('admin', 'ADMIN');
-    // Bookings that have a successful or reconciled payment but are not yet TICKETED
+    const allPayments = await repo.payments.listAllPayments();
+
     const paidBookingIds = new Set(
-      Array.from(paymentsStore.values())
-        .filter(p => p.status === 'SUCCEEDED' || p.status === 'RECONCILED')
-        .map(p => p.bookingId)
+      allPayments
+        .filter((p) => p.status === 'SUCCEEDED' || p.status === 'RECONCILED')
+        .map((p) => p.bookingId)
     );
 
-    return allBookings.filter(b => paidBookingIds.has(b.id) && b.bookingStatus !== 'TICKETED');
+    return allBookings.filter((b) => paidBookingIds.has(b.id) && b.bookingStatus !== 'TICKETED');
+  },
+
+  async clearStore(): Promise<void> {
+    await getRepository().clear();
   }
 };
-

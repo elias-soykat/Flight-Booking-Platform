@@ -9,9 +9,9 @@ import type {
 
 import { defaultFlightSupplier } from '../supplier/mock-supplier';
 import { agencyService } from '../agency/service';
+import { getRepository } from '../../repositories';
 
 export type { BookingEntity, BookingPassengerEntity, BookingEventEntity };
-
 
 export interface CreateBookingParams {
   offerId: string;
@@ -34,16 +34,13 @@ export class BookingError extends Error {
   }
 }
 
-// In-memory storage for bookings and idempotency
-const bookingsStore = new Map<string, BookingEntity>();
-const idempotencyStore = new Map<string, BookingEntity>();
-
 export const bookingService = {
   async createBooking(params: CreateBookingParams): Promise<BookingEntity> {
     const { offerId, passengers, customerUserId, userId, userRole, idempotencyKey } = params;
+    const repo = getRepository();
 
     // 1. Idempotency Check: repeated requests with identical key return existing booking
-    const cachedBooking = idempotencyStore.get(idempotencyKey);
+    const cachedBooking = await repo.bookings.getBookingByIdempotencyKey(idempotencyKey);
     if (cachedBooking) {
       return cachedBooking;
     }
@@ -151,7 +148,7 @@ export const bookingService = {
       createdByUserId: userId,
       agencyId: finalAgencyId,
       supplierId: offer.supplierId,
-      inventorySource: 'MOCK',
+      inventorySource: offer.inventorySource,
       supplierBookingReference: reservation.supplierBookingReference,
       pnr: reservation.pnr,
       bookingStatus: 'CONFIRMED',
@@ -167,15 +164,12 @@ export const bookingService = {
       updatedAt: now
     };
 
-    // 7. Store and cache
-    bookingsStore.set(booking.id, booking);
-    idempotencyStore.set(idempotencyKey, booking);
-
-    return booking;
+    // 7. Store in repository
+    return await repo.bookings.createBooking(booking);
   },
 
   async getBookingById(bookingId: string, userId: string, userRole: UserRole): Promise<BookingEntity | null> {
-    const booking = bookingsStore.get(bookingId);
+    const booking = await getRepository().bookings.getBookingById(bookingId);
     if (!booking) {
       return null;
     }
@@ -205,19 +199,23 @@ export const bookingService = {
   },
 
   async listBookings(userId: string, userRole: UserRole): Promise<BookingEntity[]> {
-    const all = Array.from(bookingsStore.values());
+    const repo = getRepository();
 
     if (userRole === 'ADMIN') {
-      return all;
+      return await repo.bookings.listAllBookings();
     }
 
     if (userRole === 'CUSTOMER') {
-      return all.filter(b => b.customerUserId === userId);
+      return await repo.bookings.listBookingsForCustomer(userId);
     }
 
     if (userRole === 'AGENCY_OWNER') {
       const agency = await agencyService.getAgencyByOwner(userId);
-      return all.filter(b => (agency && b.agencyId === agency.id) || b.createdByUserId === userId);
+      if (agency) {
+        return await repo.bookings.listBookingsForAgency(agency.id);
+      }
+      const all = await repo.bookings.listAllBookings();
+      return all.filter(b => b.createdByUserId === userId);
     }
 
     return [];
@@ -229,14 +227,14 @@ export const bookingService = {
     actorUserId?: string,
     metadata?: Record<string, unknown>
   ): Promise<BookingEntity> {
-    const booking = bookingsStore.get(bookingId);
+    const repo = getRepository();
+    const booking = await repo.bookings.getBookingById(bookingId);
     if (!booking) {
       throw new BookingError('BOOKING_NOT_FOUND', 'Booking not found', 404);
     }
 
     const previousStatus = booking.bookingStatus;
-    booking.bookingStatus = newStatus;
-    booking.updatedAt = new Date().toISOString();
+    const now = new Date().toISOString();
 
     const event: BookingEventEntity = {
       id: `evt-${bookingId}-${booking.events.length + 1}`,
@@ -245,10 +243,14 @@ export const bookingService = {
       newStatus,
       actorUserId,
       metadata,
-      createdAt: booking.updatedAt
+      createdAt: now
     };
 
-    booking.events.push(event);
-    return booking;
+    await repo.bookings.addBookingEvent(event);
+    return await repo.bookings.updateBooking(bookingId, { bookingStatus: newStatus });
+  },
+
+  async clearStore(): Promise<void> {
+    await getRepository().clear();
   }
 };
