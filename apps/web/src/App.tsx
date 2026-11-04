@@ -292,8 +292,9 @@ export const App = () => {
 
   const handleAdminIssueTickets = async (bookingId: string) => {
     try {
-      const res = await apiClient.post<{ success: boolean; data: TicketEntity[] }>(
+      await apiClient.post<{ success: boolean; data: TicketEntity[] }>(
         `/admin/bookings/${bookingId}/issue-tickets`,
+
         {},
         {
           headers: {

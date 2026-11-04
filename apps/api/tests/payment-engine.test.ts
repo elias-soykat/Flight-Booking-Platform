@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { paymentService, PaymentError } from '../src/modules/payment/service';
+import { paymentService } from '../src/modules/payment/service';
 import { bookingService } from '../src/modules/booking/service';
+
 import { defaultFlightSupplier } from '../src/modules/supplier/mock-supplier';
 import type { BookingEntity, FlightOffer } from '@travel-platform/shared';
 
