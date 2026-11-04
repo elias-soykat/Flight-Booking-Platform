@@ -678,10 +678,10 @@ Modules should have clear boundaries so they can be extracted later if needed.
                  CUSTOMER / ADMIN
                         |
                         v
-                React + Vite Frontend
+                 Next.js Frontend
                         |
                         v
-                Cloudflare API Worker
+              Vercel Serverless API
                         |
        +----------------+----------------+
        |                |                |
@@ -715,16 +715,16 @@ Modules should have clear boundaries so they can be extracted later if needed.
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Frontend | React + Vite | Customer and admin UI |
+| Frontend | Next.js | Customer and admin UI |
 | Language | TypeScript | Shared type safety |
 | Styling | Tailwind CSS | UI styling |
 | Components | shadcn/ui + Radix UI | Accessible components |
-| Routing | React Router | Application routing |
+| Routing | Next.js App Router | Application routing |
 | Server state | TanStack Query | API data and caching |
 | Forms | React Hook Form | Form management |
 | Validation | Zod | Shared schemas |
 | Backend | Node.js-compatible TypeScript with Hono | API |
-| Runtime | Cloudflare Workers | Serverless deployment |
+| Runtime | Vercel Serverless Functions | Serverless deployment |
 | Database | PostgreSQL | Application data |
 | Database hosting | Supabase Free | Managed database |
 | Authentication | Supabase Auth | Authentication |
@@ -736,16 +736,16 @@ Modules should have clear boundaries so they can be extracted later if needed.
 | Logging | Structured application logs | Error investigation |
 | Source control | GitHub | Repository |
 | CI/CD | GitHub Actions | Automated testing |
-| Frontend hosting | Cloudflare Pages | Static frontend |
-| Backend hosting | Cloudflare Workers | API deployment |
+| Frontend hosting | Vercel | Web application hosting |
+| Backend hosting | Vercel | Serverless API deployment |
 
 ## 5.4 Why this stack?
 
-**React + Vite:** Fast development, lightweight frontend, straightforward deployment.
+**Next.js:** Fast development, server-side rendering, App Router, full-stack capabilities, and seamless Vercel integration.
 
 **TypeScript:** Shared types, predictable APIs, easier refactoring.
 
-**Hono:** Lightweight API framework with TypeScript support and Cloudflare Workers compatibility.
+**Hono:** Lightweight API framework with TypeScript support and Vercel Serverless / Node.js compatibility.
 
 **PostgreSQL:** Relational integrity is essential for passengers, bookings, payments, supplier records, and audit history.
 
@@ -753,7 +753,7 @@ Modules should have clear boundaries so they can be extracted later if needed.
 
 **Drizzle ORM:** Type-safe SQL and explicit migrations.
 
-**Cloudflare:** Frontend and API can be deployed without managing a VPS.
+**Vercel:** Frontend and API can be deployed without managing a VPS.
 
 **No Docker required:** Develop and run locally using Node.js and package scripts.
 
@@ -956,8 +956,7 @@ travel-platform/
 │   │   │   │   ├── assistant/
 │   │   │   │   └── admin/
 │   │   │   ├── hooks/
-│   │   │   ├── lib/
-│   │   │   └── routes/
+│   │   │   └── lib/
 │   │   └── package.json
 │   │
 │   └── api/
@@ -1011,8 +1010,8 @@ Use npm workspaces initially. Avoid adding a complex monorepo tool unless the pr
 
 | Service | Choice | Initial cost |
 |---|---|---:|
-| Frontend | Cloudflare Pages | $0 |
-| Backend API | Cloudflare Workers Free | $0 |
+| Frontend | Vercel Hobby Free | $0 |
+| Backend API | Vercel Serverless Functions Free | $0 |
 | Database | Supabase Free | $0 |
 | Authentication | Supabase Auth Free | $0 |
 | Source code | GitHub Free | $0 |
@@ -1020,7 +1019,7 @@ Use npm workspaces initially. Avoid adding a complex monorepo tool unless the pr
 | API documentation | Scalar / OpenAPI | $0 |
 | AI | Optional free-tier provider | $0 within available quota |
 | Email | In-app notifications initially | $0 |
-| Domain | Cloudflare-provided subdomain | $0 |
+| Domain | Vercel-provided subdomain (.vercel.app) | $0 |
 
 **Estimated initial infrastructure cost: $0/month**, provided the project stays within free-tier quotas and provider terms.
 
@@ -1031,19 +1030,19 @@ A custom domain is optional and generally costs money. Do not purchase one for t
 **Frontend:**
 
 1. Push the repository to GitHub.
-2. Connect the repository to Cloudflare Pages.
-3. Configure the frontend root directory.
-4. Configure the build command.
-5. Add the API base URL.
+2. Connect the repository to Vercel.
+3. Configure the frontend root directory (`apps/web`).
+4. Configure the build command (`next build`).
+5. Add the API base URL (`NEXT_PUBLIC_API_BASE_URL`).
 6. Deploy.
 
 **Backend:**
 
-1. Install Wrangler.
-2. Configure the Cloudflare Worker.
-3. Add environment variables and secrets.
+1. Connect the API project to Vercel (or deploy via Vercel CLI).
+2. Configure the backend root directory (`apps/api`) and build settings.
+3. Add environment variables and secrets in the Vercel dashboard.
 4. Configure Supabase database connection.
-5. Deploy using Wrangler.
+5. Deploy to Vercel.
 
 **Database:**
 
@@ -1060,7 +1059,7 @@ Example:
 
 ```env
 # Frontend
-VITE_API_BASE_URL=
+NEXT_PUBLIC_API_BASE_URL=
 
 # Backend
 DATABASE_URL=
@@ -1080,7 +1079,7 @@ APP_ENV=development
 
 Never expose service-role keys, supplier secrets, or AI provider secrets through frontend environment variables.
 
-Use Cloudflare Worker secrets for private credentials.
+Use Vercel Environment Variables for private credentials.
 
 ## 9.4 Cost and usage safeguards
 
@@ -1292,8 +1291,8 @@ Only when justified by usage:
 | AI | Optional assistant with backend tools |
 | Database | PostgreSQL |
 | Backend | Hono + TypeScript |
-| Frontend | React + Vite |
-| Hosting | Cloudflare |
+| Frontend | Next.js |
+| Hosting | Vercel |
 | Authentication | Supabase Auth |
 | ORM | Drizzle |
 | Infrastructure budget | $0 initial |
