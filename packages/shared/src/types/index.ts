@@ -193,4 +193,43 @@ export interface TicketEntity {
   issuedAt: string;
 }
 
+export interface CancellationRequestEntity {
+  id: string;
+  bookingId: string;
+  bookingReference: string;
+  requestedByUserId: string;
+  reason: string;
+  status: CancellationRequestStatus;
+  previousBookingStatus: BookingStatus;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditLogEntity {
+  id: string;
+  actorUserId?: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AdminDashboardMetrics {
+  totalUsers: number;
+  totalAgencies: number;
+  totalBookings: number;
+  confirmedBookings: number;
+  ticketedBookings: number;
+  pendingCancellations: number;
+  cancelledBookings: number;
+  failedPayments: number;
+  unreconciledPayments: number;
+  operationalInterventionsRequired: number;
+}
+
+
 
