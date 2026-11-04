@@ -1,26 +1,30 @@
-import { Plane, Building2, ShieldCheck, Ticket } from 'lucide-react';
+import { Plane, Building2, ShieldCheck, Ticket, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { UserSwitcher, type DemoUserSession } from './UserSwitcher';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   currentTab?: string;
   onTabChange?: (tab: string) => void;
   currentUser: DemoUserSession;
   onUserChange: (user: DemoUserSession) => void;
+  onOpenAuth?: () => void;
 }
 
 export const Navbar = ({
   currentTab = 'flights',
   onTabChange,
   currentUser,
-  onUserChange
+  onUserChange,
+  onOpenAuth
 }: NavbarProps) => {
+  const { user, logout, isAuthenticated } = useAuth();
+
   const navItems = [
     { id: 'flights', label: 'Flights', icon: Plane },
     { id: 'bookings', label: 'My Bookings', icon: Ticket },
     { id: 'agency', label: 'Agency Portal', icon: Building2 },
     { id: 'admin', label: 'Admin Dashboard', icon: ShieldCheck }
   ];
-
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -61,8 +65,36 @@ export const Navbar = ({
             })}
           </nav>
 
-          {/* Role Switcher */}
-          <div className="flex items-center gap-2">
+          {/* Auth & Role Controls */}
+          <div className="flex items-center gap-3">
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="font-semibold text-slate-800">{user.fullName || user.email}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700">
+                    {user.role}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Sign In</span>
+              </button>
+            )}
+
+            {/* Dev Demo User Switcher */}
             <UserSwitcher currentUser={currentUser} onSelectUser={onUserChange} />
           </div>
         </div>

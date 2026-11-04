@@ -14,6 +14,8 @@ import { TicketView } from './components/TicketView';
 import { CancellationModal } from './components/CancellationModal';
 import { CancellationReviewQueue } from './components/CancellationReviewQueue';
 import { AuditLogView } from './components/AuditLogView';
+import { AuthProvider } from './context/AuthContext';
+import { AuthModal } from './components/AuthModal';
 import type {
   FlightOffer,
   FlightSearchQuery,
@@ -29,9 +31,10 @@ import type {
 import { apiClient } from './lib/api-client';
 import { ShieldCheck, CheckCircle2, AlertCircle, Ticket, Clock, Check, RefreshCw, Activity } from 'lucide-react';
 
-export const App = () => {
+const AppContent = () => {
   const [activeTab, setActiveTab] = useState('flights');
   const [currentUser, setCurrentUser] = useState<DemoUserSession>(DEMO_USERS.CUSTOMER);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Flight search state
   const [searchCriteria, setSearchCriteria] = useState<FlightSearchQuery | null>({
@@ -494,6 +497,7 @@ export const App = () => {
         }}
         currentUser={currentUser}
         onUserChange={setCurrentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -860,11 +864,23 @@ export const App = () => {
         />
       )}
 
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         Travel Booking Platform MVP &bull; Free-Tier Open-Source &bull; Deterministic Mock Supplier &bull; Simulated Payments
       </footer>
     </div>
   );
 };
+
+export const App = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
 
 export default App;
