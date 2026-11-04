@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import type { AuditLogEntity } from '@travel-platform/shared';
 
 const auditLogsStore = new Map<string, AuditLogEntity>();
