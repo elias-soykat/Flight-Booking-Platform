@@ -1,13 +1,34 @@
-import { describe, it, expect } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { describe, it, expect, beforeAll } from 'vitest';
 
 describe('Production Edge Deployment Configuration ($0 Cloudflare Budget)', () => {
-  const rootDir = path.resolve(__dirname, '../../..');
-  const apiWranglerPath = path.join(rootDir, 'apps/api/wrangler.toml');
-  const webRoutesJsonPath = path.join(rootDir, 'apps/web/public/_routes.json');
-  const webRedirectsPath = path.join(rootDir, 'apps/web/public/_redirects');
-  const rootPackageJsonPath = path.join(rootDir, 'package.json');
+  let rootDir: string;
+  let apiWranglerPath: string;
+  let webRoutesJsonPath: string;
+  let webRedirectsPath: string;
+  let rootPackageJsonPath: string;
+  let fs: {
+    existsSync(path: string): boolean;
+    readFileSync(path: string, encoding: string): string;
+  };
+
+  beforeAll(async () => {
+    // @ts-expect-error Dynamic Node path import in Vitest environment
+    const path = (await import('node:path')) as {
+      resolve(...paths: string[]): string;
+      join(...paths: string[]): string;
+    };
+    // @ts-expect-error Dynamic Node fs import in Vitest environment
+    fs = (await import('node:fs')) as {
+      existsSync(path: string): boolean;
+      readFileSync(path: string, encoding: string): string;
+    };
+
+    rootDir = ((globalThis as any).process?.cwd?.() as string) || '';
+    apiWranglerPath = path.join(rootDir, 'apps/api/wrangler.toml');
+    webRoutesJsonPath = path.join(rootDir, 'apps/web/public/_routes.json');
+    webRedirectsPath = path.join(rootDir, 'apps/web/public/_redirects');
+    rootPackageJsonPath = path.join(rootDir, 'package.json');
+  });
 
   it('should have a valid Cloudflare Workers wrangler.toml configuration for API', () => {
     expect(fs.existsSync(apiWranglerPath)).toBe(true);

@@ -125,7 +125,6 @@ describe('PRD Section 20 E2E Verification: Scenarios A & B', () => {
     const customerUserId = 'e2e-cust-scenario-b';
     const customerEmail = 'eleanor.b@example.com';
     let agencyId: string;
-    let secondAgencyId: string;
     let selectedOfferId: string;
     let agencyBookingId: string;
 
@@ -194,7 +193,8 @@ describe('PRD Section 20 E2E Verification: Scenarios A & B', () => {
         })
       });
       const agency2Body = (await agency2Res.json()) as any;
-      secondAgencyId = agency2Body.data.id;
+      const secondAgencyId = agency2Body.data.id;
+      expect(secondAgencyId).toBeDefined();
 
       // Second agency invites the same customer
       const invite2Res = await app.request('/api/v1/agencies/invitations', {
