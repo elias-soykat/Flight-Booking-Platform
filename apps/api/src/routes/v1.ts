@@ -5,6 +5,7 @@ import { authRouter } from './auth';
 import { customersRouter } from './customers';
 import { agenciesRouter } from './agencies';
 import { adminRouter } from './admin';
+import { flightsRouter } from './flights';
 
 export const v1Router = new Hono<AppContext>();
 
@@ -32,3 +33,4 @@ v1Router.route('/auth', authRouter);
 v1Router.route('/customers', customersRouter);
 v1Router.route('/agencies', agenciesRouter);
 v1Router.route('/admin', adminRouter);
+v1Router.route('/flights', flightsRouter);
