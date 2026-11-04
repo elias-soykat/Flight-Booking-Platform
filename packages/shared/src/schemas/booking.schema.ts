@@ -12,9 +12,10 @@ export const PassengerSchema = z.object({
 
 export const CreateBookingSchema = z.object({
   offerId: z.string().min(1, 'Flight offer ID is required'),
-  customerUserId: z.string().uuid().optional(),
+  customerUserId: z.string().min(1, 'Customer user ID is required').optional(),
   passengers: z.array(PassengerSchema).min(1, 'At least one passenger is required').max(9)
 });
+
 
 export type PassengerInput = z.infer<typeof PassengerSchema>;
 export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
