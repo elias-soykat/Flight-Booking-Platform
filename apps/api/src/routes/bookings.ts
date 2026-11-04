@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { AppContext } from '../types/env';
-import { CreateBookingSchema } from '@travel-platform/shared';
+import { CreateBookingSchema, CreateCancellationRequestSchema } from '@travel-platform/shared';
 import { requireRole } from '../middleware/rbac';
 import { bookingService, BookingError } from '../modules/booking/service';
 import { paymentService, PaymentError } from '../modules/payment/service';
+import { cancellationService, CancellationError } from '../modules/cancellation/service';
 import type { SimulationScenario } from '@travel-platform/shared';
 
 export const bookingsRouter = new Hono<AppContext>();
@@ -237,5 +238,77 @@ bookingsRouter.get(
     });
   }
 );
+
+// Submit cancellation request for a booking
+bookingsRouter.post(
+  '/:bookingId/cancellation-requests',
+  requireRole('CUSTOMER', 'AGENCY_OWNER', 'ADMIN'),
+  zValidator('json', CreateCancellationRequestSchema, (result, c) => {
+    if (!result.success) {
+      return c.json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid cancellation request payload',
+          details: result.error.errors
+        }
+      }, 400);
+    }
+    return undefined;
+  }),
+  async (c) => {
+    const bookingId = c.req.param('bookingId');
+    const body = c.req.valid('json');
+    const userId = c.get('userId')!;
+    const userRole = c.get('userRole')!;
+
+    try {
+      const request = await cancellationService.requestCancellation({
+        bookingId,
+        reason: body.reason,
+        userId,
+        userRole
+      });
+
+      return c.json({
+        success: true,
+        data: request
+      }, 201);
+    } catch (err: unknown) {
+      if (err instanceof CancellationError) {
+        return c.json({
+          success: false,
+          error: {
+            code: err.code,
+            message: err.message
+          }
+        }, err.statusCode as any);
+      }
+      const message = err instanceof Error ? err.message : 'Failed to request cancellation';
+      return c.json({
+        success: false,
+        error: {
+          code: 'CANCELLATION_REQUEST_FAILED',
+          message
+        }
+      }, 500);
+    }
+  }
+);
+
+// Get cancellation request for a booking
+bookingsRouter.get(
+  '/:bookingId/cancellation-requests',
+  requireRole('CUSTOMER', 'AGENCY_OWNER', 'ADMIN'),
+  async (c) => {
+    const bookingId = c.req.param('bookingId');
+    const request = await cancellationService.getCancellationForBooking(bookingId);
+    return c.json({
+      success: true,
+      data: request
+    });
+  }
+);
+
 
 
