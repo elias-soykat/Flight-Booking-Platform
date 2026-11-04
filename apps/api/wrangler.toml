@@ -1,0 +1,15 @@
+name = "travel-platform-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NODE_ENV = "production"
+DEFAULT_CURRENCY = "USD"
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_ANON_KEY = "placeholder-supabase-anon-key"
+SUPABASE_SERVICE_ROLE_KEY = "placeholder-supabase-service-role-key"
+
+# In production edge deployment, the Supabase Postgres connection string
+# is bound securely via Cloudflare secrets:
+# npx wrangler secret put DATABASE_URL
