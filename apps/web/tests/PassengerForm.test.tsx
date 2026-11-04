@@ -126,3 +126,4 @@ describe('PassengerForm Component', () => {
     expect(handleSubmit).not.toHaveBeenCalled();
   });
 });
+
