@@ -20,6 +20,7 @@ export const agencyMemberships = pgTable('agency_memberships', {
   agencyId: uuid('agency_id').notNull().references(() => agencies.id, { onDelete: 'cascade' }),
   customerUserId: uuid('customer_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: agencyMembershipStatusEnum('status').notNull().default('ACTIVE'),
+  associatedAt: timestamp('associated_at', { withTimezone: true }).defaultNow().notNull(),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 }, (table) => [
@@ -28,10 +29,13 @@ export const agencyMemberships = pgTable('agency_memberships', {
     .where(sql`status = 'ACTIVE'`)
 ]);
 
+export const agencyMembers = agencyMemberships;
+
 export const agencyInvitations = pgTable('agency_invitations', {
   id: uuid('id').primaryKey().defaultRandom(),
   agencyId: uuid('agency_id').notNull().references(() => agencies.id, { onDelete: 'cascade' }),
   email: text('email').notNull(),
+  invitedByUserId: uuid('invited_by_user_id').references(() => users.id),
   invitationTokenHash: text('invitation_token_hash').notNull().unique(),
   status: agencyInvitationStatusEnum('status').notNull().default('PENDING'),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

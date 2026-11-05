@@ -6,6 +6,8 @@ export const userStatusEnum = pgEnum('user_status', ['ACTIVE', 'SUSPENDED']);
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
+  fullName: text('full_name'),
+  passwordHash: text('password_hash'),
   role: userRoleEnum('role').notNull().default('CUSTOMER'),
   status: userStatusEnum('status').notNull().default('ACTIVE'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

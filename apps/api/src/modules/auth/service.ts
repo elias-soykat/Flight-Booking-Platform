@@ -277,3 +277,4 @@ export const authService = {
     return await verifyJwt(token, JWT_SECRET);
   }
 };
+

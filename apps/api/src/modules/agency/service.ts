@@ -1,7 +1,7 @@
 import { generateSecureToken, hashToken } from '../../utils/crypto';
 import { identityService } from '../identity/service';
 import { getRepository } from '../../repositories';
-import type { AgencyStatus, AgencyInvitationStatus, AgencyMembershipStatus } from '@travel-platform/shared';
+import type { AgencyInvitationStatus, AgencyMembershipStatus } from '@travel-platform/shared';
 import type { AgencyEntity, AgencyMemberEntity } from '../../repositories/types';
 
 export type { AgencyEntity };
@@ -110,6 +110,7 @@ export const agencyService = {
   async getAgencyInvitations(agencyId: string): Promise<AgencyInvitationEntity[]> {
     const repo = getRepository();
     const agency = await repo.agencies.getAgencyById(agencyId);
+    if (!agency) return [];
     // Find invitations for agency
     return [];
   },

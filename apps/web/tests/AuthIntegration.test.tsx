@@ -111,3 +111,4 @@ describe('Frontend Authentication Integration & Modal UI', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 });
+

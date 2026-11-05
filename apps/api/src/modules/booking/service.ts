@@ -246,7 +246,7 @@ export const bookingService = {
       createdAt: now
     };
 
-    await repo.bookings.addBookingEvent(event);
+    await repo.bookings.addBookingEvent(bookingId, event);
     return await repo.bookings.updateBooking(bookingId, { bookingStatus: newStatus });
   },
 

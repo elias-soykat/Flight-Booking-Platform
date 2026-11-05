@@ -166,8 +166,8 @@ export class MemoryRepository implements IAppRepository {
       return list;
     },
     listAllBookings: async () => Array.from(this.bookingsStore.values()),
-    addBookingEvent: async (event) => {
-      const booking = this.bookingsStore.get(event.bookingId || '');
+    addBookingEvent: async (bookingId, event) => {
+      const booking = this.bookingsStore.get(bookingId);
       if (booking) {
         booking.events.push(event);
       }

@@ -9,6 +9,7 @@ export const tickets = pgTable('tickets', {
   id: uuid('id').primaryKey().defaultRandom(),
   bookingId: uuid('booking_id').notNull().references(() => bookings.id, { onDelete: 'cascade' }),
   passengerId: uuid('passenger_id').notNull().references(() => bookingPassengers.id, { onDelete: 'cascade' }),
+  passengerName: text('passenger_name'),
   ticketNumber: text('ticket_number').notNull().unique(), // e.g. 001-DEMO-XXXXXXXXXX
   issuanceMethod: ticketIssuanceMethodEnum('issuance_method').notNull().default('AUTOMATIC_SIMULATED'),
   issuanceStatus: ticketIssuanceStatusEnum('issuance_status').notNull().default('ISSUED'),

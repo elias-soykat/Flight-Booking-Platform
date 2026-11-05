@@ -84,7 +84,7 @@ export interface IBookingRepository {
   listBookingsForCustomer(customerUserId: string): Promise<BookingEntity[]>;
   listBookingsForAgency(agencyId: string): Promise<BookingEntity[]>;
   listAllBookings(): Promise<BookingEntity[]>;
-  addBookingEvent(event: BookingEventEntity): Promise<BookingEventEntity>;
+  addBookingEvent(bookingId: string, event: BookingEventEntity): Promise<BookingEventEntity>;
 }
 
 export interface IPaymentRepository {

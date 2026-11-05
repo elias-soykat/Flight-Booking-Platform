@@ -407,12 +407,12 @@ export class DrizzleRepository implements IAppRepository {
       }
       return result;
     },
-    addBookingEvent: async (event) => {
+    addBookingEvent: async (bookingId, event) => {
       const [inserted] = await this.db
         .insert(bookingEvents)
         .values({
           id: event.id,
-          bookingId: event.bookingId,
+          bookingId: bookingId,
           eventType: event.eventType,
           previousStatus: event.previousStatus,
           newStatus: event.newStatus,

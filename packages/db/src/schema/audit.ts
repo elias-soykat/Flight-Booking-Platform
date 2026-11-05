@@ -7,12 +7,16 @@ export const cancellationStatusEnum = pgEnum('cancellation_status', ['PENDING', 
 export const cancellationRequests = pgTable('cancellation_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   bookingId: uuid('booking_id').notNull().references(() => bookings.id, { onDelete: 'cascade' }),
-  requestedBy: uuid('requested_by').notNull().references(() => users.id),
+  bookingReference: text('booking_reference'),
+  requestedByUserId: uuid('requested_by_user_id').notNull().references(() => users.id),
   reason: text('reason').notNull(),
   status: cancellationStatusEnum('status').notNull().default('PENDING'),
-  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  previousBookingStatus: text('previous_booking_status'),
+  reviewedByUserId: uuid('reviewed_by_user_id').references(() => users.id),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+  reviewNote: text('review_note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 });
 
 export const auditLogs = pgTable('audit_logs', {
